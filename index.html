@@ -1,0 +1,1122 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280, initial-scale=1">
+<title>내전 경매</title>
+<style>
+  :root{
+    --bg:#faf0f8;
+    --bg-2:#fff6fa;
+    --surface:#fffcfd;
+    --surface-2:#fbe7f1;
+    --surface-3:#f6d8e8;
+    --border:#f2d9e6;
+    --border-soft:#f8e9f1;
+    --text:#4a3352;
+    --text-dim:#8b738f;
+    --text-faint:#c2aec4;
+    --accent:#e0397d;
+    --accent-strong:#a82960;
+    --accent-dim:#fbd9ea;
+    --accent-ink:#ffffff;
+    --good:#2fbf8a;
+    --good-dim:#dcf7ec;
+    --bad:#ff6b7a;
+    --bad-dim:#ffe3e6;
+    --focus:#e0397d;
+    --shadow-card:0 1px 2px rgba(74,51,82,.06), 0 4px 14px -6px rgba(74,51,82,.12);
+    --radius:16px;
+    --radius-sm:10px;
+  }
+  *,*::before,*::after{ box-sizing:border-box; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:"Pretendard Variable","Malgun Gothic","Apple SD Gothic Neo","Segoe UI",sans-serif;
+    font-size:14px;
+    line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  button, input, select, textarea{ font-family:inherit; color:inherit; }
+  h1,h2,h3{ margin:0; text-wrap:balance; }
+  .num{ font-variant-numeric:tabular-nums; }
+  :focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
+
+  /* ---------- shell ---------- */
+  #app{ min-height:100vh; display:flex; flex-direction:column; min-width:1080px; overflow-x:auto; }
+  .header{
+    height:56px; flex:0 0 auto;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 20px;
+    background:var(--bg-2);
+    border-bottom:1px solid var(--border);
+    box-shadow:0 2px 10px -6px rgba(74,51,82,.14);
+    position:relative; z-index:1;
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+  .brand-mark{ font-weight:800; font-size:17px; letter-spacing:.02em; color:var(--accent-strong); }
+  .brand-sub{ font-size:12px; color:var(--text-faint); }
+  .header-mid{ font-size:13px; color:var(--text-dim); }
+  .header-right{ display:flex; align-items:center; gap:8px; }
+
+  .btn{
+    appearance:none; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--text); padding:8px 14px; border-radius:var(--radius-sm);
+    font-size:13px; font-weight:600; cursor:pointer; white-space:nowrap;
+    transition:background-color .12s, border-color .12s, opacity .12s, transform .05s;
+  }
+  .btn:hover:not(:disabled){ background:var(--surface-3); border-color:var(--accent-dim); }
+  .btn:active:not(:disabled){ transform:translateY(1px); }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn-accent{ background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+  .btn-accent:hover:not(:disabled){ background:var(--accent-strong); border-color:var(--accent-strong); }
+  .btn-ghost{ background:transparent; }
+  .btn-danger{ border-color:var(--bad); color:var(--bad); }
+  .btn-danger:hover:not(:disabled){ background:var(--bad-dim); }
+  .btn-sm{ padding:5px 10px; font-size:12px; }
+  .btn-block{ width:100%; }
+
+  /* ---------- setup ---------- */
+  .setup-shell{ flex:1; overflow-y:auto; padding:32px 20px 60px; }
+  .setup-grid{ max-width:920px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
+  .setup-title{ font-size:22px; font-weight:800; margin-bottom:2px; }
+  .setup-lede{ color:var(--text-dim); font-size:13px; margin-bottom:8px; }
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:18px 20px; box-shadow:var(--shadow-card);
+  }
+  .card-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .card-head h2{ font-size:14px; font-weight:700; color:var(--text); }
+  .card-head .hint{ font-size:12px; color:var(--text-faint); }
+  .field-label{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; display:block; margin-bottom:4px; }
+  input[type=text], input[type=number], textarea, select{
+    background:var(--bg-2); border:1px solid var(--border); color:var(--text);
+    border-radius:var(--radius-sm); padding:8px 10px; font-size:13px; width:100%;
+  }
+  input[type=number]{ font-variant-numeric:tabular-nums; }
+  textarea{ resize:vertical; min-height:88px; font-family:inherit; }
+
+  .team-row{
+    display:grid; grid-template-columns:1fr 120px 100px 32px; gap:10px; align-items:end;
+    padding:10px 0; border-bottom:1px solid var(--border-soft);
+  }
+  .team-row:last-child{ border-bottom:none; }
+  .row-remove{
+    width:32px; height:32px; border-radius:var(--radius-sm); border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text-dim); cursor:pointer; font-size:15px; line-height:1;
+  }
+  .row-remove:hover{ background:var(--bad-dim); color:var(--bad); border-color:var(--bad); }
+
+  .config-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+
+  .player-count{ font-size:12px; color:var(--text-faint); margin:10px 0 6px; }
+  .player-table{ display:flex; flex-direction:column; gap:4px; }
+  .player-row{
+    display:grid; grid-template-columns:minmax(120px,1fr) 84px 148px 148px 148px 30px;
+    gap:8px; align-items:center;
+  }
+  .player-row.head{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em; padding:0 0 2px; }
+  .pick-search{ display:flex; align-items:center; gap:6px; }
+  .pick-search-box{ position:relative; flex:1; min-width:0; }
+  .pick-dropdown{
+    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:20;
+    background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-sm);
+    max-height:220px; overflow-y:auto; box-shadow:0 8px 24px -8px rgba(74,51,82,.24);
+  }
+  .pick-dropdown[hidden]{ display:none; }
+  .pick-dropdown-item{
+    display:flex; align-items:center; gap:8px; width:100%; padding:6px 8px; border:none; background:none;
+    color:var(--text); font-size:12.5px; cursor:pointer; text-align:left;
+  }
+  .pick-dropdown-item:hover{ background:var(--surface-2); }
+  .pdi-icon{ width:22px; height:22px; border-radius:5px; overflow:hidden; flex:0 0 auto; background:var(--surface-2); }
+  .pdi-icon img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .pdi-name{ flex:1; }
+  .pick-icon{
+    position:relative; width:26px; height:26px; flex:0 0 auto; border-radius:6px; overflow:hidden;
+    border:1px solid var(--border); background:var(--surface-2);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .pick-icon img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .pick-icon .pick-fallback-text{ display:none; font-size:7px; text-align:center; padding:1px; color:var(--text-faint); line-height:1.05; word-break:break-all; }
+  .pick-icon.fallback .pick-fallback-text{ display:block; }
+  .pick-icon.empty{ border-style:dashed; }
+  .pick-icon.lg{ width:56px; height:56px; border-radius:8px; }
+  .pick-icon.lg .pick-fallback-text{ font-size:9px; padding:2px; }
+  .mostpick{ display:flex; align-items:center; gap:12px; margin:2px 0 4px; }
+  .mostpick-label{ font-size:10px; letter-spacing:.08em; color:var(--text-faint); writing-mode:vertical-rl; text-orientation:mixed; }
+  .mostpick-icons{ display:flex; gap:8px; }
+
+  .start-bar{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding-top:6px; }
+  .start-hint{ font-size:12px; color:var(--bad); min-height:16px; }
+
+  /* ---------- auction layout ---------- */
+  .layout{ flex:1; display:grid; grid-template-columns:300px 1fr 300px; min-height:0; }
+  .panel{ overflow-y:auto; padding:16px; border-right:1px solid var(--border); }
+  .panel:last-child{ border-right:none; }
+  .panel-title{
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em;
+    color:var(--text-faint); margin-bottom:12px;
+  }
+
+  /* team cards */
+  .team-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:12px 12px 14px; margin-bottom:12px; transition:border-color .15s, box-shadow .15s;
+    box-shadow:var(--shadow-card);
+  }
+  .team-card.leading{ border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset, 0 0 16px -6px var(--accent); }
+  .team-card-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px; }
+  .team-card-name{ font-weight:700; font-size:13.5px; }
+  .team-card-pts{ font-size:12.5px; color:var(--accent-strong); font-weight:700; }
+  .team-card-pts .total{ color:var(--text-faint); font-weight:500; }
+  .slots{ display:flex; flex-wrap:wrap; gap:5px; }
+  .slot{
+    flex:1 1 auto; min-width:64px; border-radius:var(--radius-sm); padding:5px 7px;
+    font-size:11px; border:1px dashed var(--border);
+    color:var(--text-faint); background:var(--bg-2);
+  }
+  .slot.filled{ border-style:solid; border-color:var(--border); color:var(--text); background:var(--surface-2); }
+  .slot .slot-name{ display:block; font-weight:600; color:var(--text); }
+  .slot .slot-price{ color:var(--accent-strong); font-variant-numeric:tabular-nums; }
+
+  /* stage */
+  .stage{ display:flex; flex-direction:column; padding:20px; gap:14px; overflow-y:auto; }
+  .stage-empty{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; text-align:center; color:var(--text-dim); padding:40px 20px;
+  }
+  .player-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:20px 24px; box-shadow:var(--shadow-card);
+  }
+  .player-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .player-idx{ font-size:12px; color:var(--text-faint); }
+  .player-name-row{ display:flex; align-items:center; gap:10px; }
+  .player-name{ font-size:26px; font-weight:800; }
+  .badge-pos{
+    font-size:12px; padding:3px 9px; border-radius:999px; border:1px solid var(--border);
+    color:var(--text-dim); background:var(--surface-2);
+  }
+  .bid-now{ display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; }
+  .bid-amount-wrap{ display:flex; flex-direction:column; gap:2px; }
+  .bid-amount-label{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.06em; }
+  .bid-amount{ font-size:34px; font-weight:800; color:var(--accent-strong); }
+  .bid-team{ font-size:14px; color:var(--text-dim); }
+  .timer-box{ display:flex; align-items:center; gap:12px; }
+  .timer-num{ font-size:40px; font-weight:800; min-width:64px; text-align:right; color:var(--text); }
+  .timer-box.urgent .timer-num{ color:var(--bad); }
+  .timer-bar{ width:100px; height:6px; border-radius:3px; background:var(--surface-3); overflow:hidden; }
+  .timer-fill{ height:100%; background:var(--accent); transition:width 1s linear; }
+  .timer-box.urgent .timer-fill{ background:var(--bad); }
+  @media (prefers-reduced-motion:no-preference){
+    .timer-box.urgent .timer-num{ animation:pulse 1s ease-in-out infinite; }
+  }
+  @keyframes pulse{ 0%,100%{ opacity:1 } 50%{ opacity:.5 } }
+  .timer-controls{ display:flex; gap:6px; }
+
+  .result-banner{
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    background:var(--good-dim); border:1px solid var(--good); border-radius:var(--radius);
+    padding:14px 18px;
+  }
+  .result-banner.passed{ background:var(--bad-dim); border-color:var(--bad); }
+  .result-banner strong{ font-size:16px; }
+
+  .controls-card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px 18px; display:flex; flex-direction:column; gap:14px; box-shadow:var(--shadow-card);
+  }
+  .controls-row-title{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-faint); margin-bottom:8px; }
+  .team-bid-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; }
+  .team-bid-btn{
+    display:flex; flex-direction:column; align-items:flex-start; gap:2px;
+    border:1px solid var(--border); background:var(--surface-2); border-radius:var(--radius-sm);
+    padding:8px 10px; cursor:pointer; text-align:left;
+  }
+  .team-bid-btn:hover:not(:disabled){ border-color:var(--accent); background:var(--surface-3); }
+  .team-bid-btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .team-bid-btn .tb-name{ font-weight:700; font-size:12.5px; }
+  .team-bid-btn .tb-amount{ font-size:12px; color:var(--accent-strong); font-variant-numeric:tabular-nums; }
+  .custom-bid-row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .custom-bid-row select, .custom-bid-row input{ width:auto; }
+  .action-row{ display:flex; gap:10px; flex-wrap:wrap; }
+  .error-msg{ font-size:12px; color:var(--bad); min-height:16px; }
+  .log-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:5px; max-height:120px; overflow-y:auto; }
+  .log-item{ font-size:12px; color:var(--text-dim); display:flex; justify-content:space-between; gap:8px; }
+  .log-item .amt{ color:var(--accent-strong); font-variant-numeric:tabular-nums; }
+
+  /* queue panel */
+  .queue-item{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:7px 9px; border-radius:var(--radius-sm); font-size:12.5px; margin-bottom:5px;
+    background:var(--surface); border:1px solid var(--border-soft);
+  }
+  .queue-item .qi-idx{ color:var(--text-faint); width:20px; flex:0 0 auto; }
+  .queue-item .qi-name{ flex:1; }
+  .passed-item{
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+    padding:7px 9px; border-radius:var(--radius-sm); font-size:12.5px; margin-bottom:5px;
+    background:var(--bad-dim); border:1px solid var(--border);
+  }
+  .empty-note{ font-size:12px; color:var(--text-faint); padding:6px 2px; }
+
+  /* finished */
+  .finish-shell{ flex:1; overflow-y:auto; padding:32px 20px 60px; }
+  .finish-grid{ max-width:960px; margin:0 auto; display:flex; flex-direction:column; gap:20px; }
+  .result-teams{ display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:14px; }
+  .result-team-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow-card); }
+  .result-team-card h3{ font-size:14px; margin-bottom:4px; }
+  .result-team-card .pts{ font-size:12px; color:var(--text-faint); margin-bottom:10px; }
+  .result-roster{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+  .result-roster li{ display:flex; justify-content:space-between; font-size:12.5px; }
+  .result-roster .p-price{ color:var(--accent-strong); font-variant-numeric:tabular-nums; }
+  .copy-box{ width:100%; min-height:180px; font-size:12px; }
+
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-thumb{ background:var(--surface-3); border-radius:6px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+</style>
+
+<div id="app"></div>
+
+<script>
+(function(){
+  "use strict";
+  var STORE_KEY = "naejeon_auction_state_v1";
+
+  function defaultState(){
+    return {
+      phase:"setup",
+      config:{ startBid:10, increment:10, timerSeconds:20 },
+      teams:[
+        { id:uid(), name:"", total:1000, slots:5, remaining:1000, roster:[] },
+        { id:uid(), name:"", total:1000, slots:5, remaining:1000, roster:[] }
+      ],
+      players:[],
+      order:[],
+      passedOrder:[],
+      current:null,
+      log:[]
+    };
+  }
+
+  function uid(){ return Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4); }
+
+  function escapeHtml(str){
+    return String(str==null?"":str).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+    });
+  }
+
+  function shuffle(arr){
+    var a = arr.slice();
+    for(var i=a.length-1;i>0;i--){
+      var j = Math.floor(Math.random()*(i+1));
+      var t=a[i]; a[i]=a[j]; a[j]=t;
+    }
+    return a;
+  }
+
+  /* ---------------- champion data (Wild Rift roster, ko-KR) ---------------- */
+  /* source: WildRift-Merged-Champion-Data (data_ko_KR.json), same feed the
+     wildrift companion app's sync_champions.py uses to build champion.image_url */
+
+  var DDRAGON_VERSION = "16.13.1";
+  var WR_CHAMPS_RAW = [
+    ["Garen","가렌"],["Galio","갈리오"],["Gragas","그라가스"],["Graves","그레이브즈"],["Gwen","그웬"],
+    ["Gnar","나르"],["Nami","나미"],["Nasus","나서스"],["Nautilus","노틸러스"],["Nocturne","녹턴"],
+    ["Nunu","누누와 윌럼프"],["Nidalee","니달리"],["Nilah","닐라"],["Darius","다리우스"],["Diana","다이애나"],
+    ["Draven","드레이븐"],["Ryze","라이즈"],["Rakan","라칸"],["Rammus","람머스"],["Lux","럭스"],
+    ["Rumble","럼블"],["Renekton","레넥톤"],["Leona","레오나"],["Rell","렐"],["Rengar","렝가"],
+    ["Lucian","루시안"],["Lulu","룰루"],["LeeSin","리 신"],["Riven","리븐"],["Lissandra","리산드라"],
+    ["Lillia","릴리아"],["MasterYi","마스터 이"],["Maokai","마오카이"],["Malphite","말파이트"],["Mel","멜"],
+    ["Mordekaiser","모데카이저"],["Morgana","모르가나"],["DrMundo","문도 박사"],["MissFortune","미스 포츈"],["Milio","밀리오"],
+    ["Bard","바드"],["Varus","바루스"],["Vi","바이"],["Veigar","베이가"],["Vayne","베인"],
+    ["Vex","벡스"],["Velkoz","벨코즈"],["Volibear","볼리베어"],["Braum","브라움"],["Brand","브랜드"],
+    ["Vladimir","블라디미르"],["Blitzcrank","블리츠크랭크"],["Viego","비에고"],["Viktor","빅토르"],["Poppy","뽀삐"],
+    ["Samira","사미라"],["Sion","사이온"],["Senna","세나"],["Seraphine","세라핀"],["Sett","세트"],
+    ["Sona","소나"],["Soraka","소라카"],["Shen","쉔"],["Shyvana","쉬바나"],["Smolder","스몰더"],
+    ["Swain","스웨인"],["Skarner","스카너"],["Sivir","시비르"],["XinZhao","신 짜오"],["Syndra","신드라"],
+    ["Singed","신지드"],["Thresh","쓰레쉬"],["Ahri","아리"],["Amumu","아무무"],["AurelionSol","아우렐리온 솔"],
+    ["Akali","아칼리"],["Akshan","아크샨"],["Aatrox","아트록스"],["Alistar","알리스타"],["Ambessa","암베사"],
+    ["Annie","애니"],["Ashe","애쉬"],["Yasuo","야스오"],["Ekko","에코"],["MonkeyKing","오공"],
+    ["Aurora","오로라"],["Ornn","오른"],["Orianna","오리아나"],["Olaf","올라프"],["Yone","요네"],
+    ["Urgot","우르곳"],["Warwick","워윅"],["Yunara","유나라"],["Yuumi","유미"],["Irelia","이렐리아"],
+    ["Evelynn","이블린"],["Ezreal","이즈리얼"],["JarvanIV","자르반 4세"],["Xayah","자야"],["Zyra","자이라"],
+    ["Janna","잔나"],["Jax","잭스"],["Zed","제드"],["Zeri","제리"],["Jayce","제이스"],
+    ["Zoe","조이"],["Ziggs","직스"],["Jhin","진"],["Zilean","질리언"],["Jinx","징크스"],
+    ["Chogath","초가스"],["Karma","카르마"],["Camille","카밀"],["Kassadin","카사딘"],["Kaisa","카이사"],
+    ["Khazix","카직스"],["Katarina","카타리나"],["Kalista","칼리스타"],["Kennen","케넨"],["Caitlyn","케이틀린"],
+    ["Kayn","케인"],["Kayle","케일"],["KogMaw","코그모"],["Corki","코르키"],["KSante","크산테"],
+    ["Kindred","킨드레드"],["Talon","탈론"],["Taliyah","탈리야"],["Tristana","트리스타나"],["Tryndamere","트린다미어"],
+    ["TwistedFate","트위스티드 페이트"],["Twitch","트위치"],["Teemo","티모"],["Pyke","파이크"],["Pantheon","판테온"],
+    ["Fiddlesticks","피들스틱"],["Fiora","피오라"],["Fizz","피즈"],["Heimerdinger","하이머딩거"],["Hecarim","헤카림"]
+  ];
+  var CHAMP_DB = WR_CHAMPS_RAW.map(function(pair){
+    return { id:pair[0], name:pair[1], normKR:pair[1].replace(/\s+/g,"").toLowerCase(), normEN:pair[0].toLowerCase() };
+  });
+
+  function normKRText(t){ return String(t||"").trim().replace(/\s+/g,"").toLowerCase(); }
+  function normENText(t){ return String(t||"").toLowerCase().replace(/[^a-z0-9]/g,""); }
+
+  function matchChampion(text){
+    var tKR = normKRText(text);
+    var tEN = normENText(text);
+    if(!tKR) return null;
+    var i;
+    for(i=0;i<CHAMP_DB.length;i++){ if(CHAMP_DB[i].normKR===tKR) return CHAMP_DB[i]; }
+    if(tEN){ for(i=0;i<CHAMP_DB.length;i++){ if(CHAMP_DB[i].normEN===tEN) return CHAMP_DB[i]; } }
+    if(tKR.length>=2){ for(i=0;i<CHAMP_DB.length;i++){ if(CHAMP_DB[i].normKR.indexOf(tKR)===0) return CHAMP_DB[i]; } }
+    if(tEN.length>=2){ for(i=0;i<CHAMP_DB.length;i++){ if(CHAMP_DB[i].normEN.indexOf(tEN)===0) return CHAMP_DB[i]; } }
+    return null;
+  }
+
+  function championImgUrl(id){
+    return "https://ddragon.leagueoflegends.com/cdn/"+DDRAGON_VERSION+"/img/champion/"+id+".png";
+  }
+
+  function pickIconHtml(text, size){
+    var cls = "pick-icon"+(size==="lg"?" lg":"");
+    var t = String(text==null?"":text).trim();
+    if(!t) return '<div class="'+cls+' empty"></div>';
+    var champ = matchChampion(t);
+    var label = champ ? champ.name : t;
+    var id = champ ? champ.id : t.replace(/[^a-zA-Z0-9]/g,"");
+    return '<div class="'+cls+'" title="'+escapeHtml(label)+'">'+
+      '<img src="'+championImgUrl(id)+'" alt="'+escapeHtml(label)+'" loading="lazy" onerror="this.parentElement.classList.add(\'fallback\');this.remove();">'+
+      '<span class="pick-fallback-text">'+escapeHtml(label)+'</span>'+
+    '</div>';
+  }
+
+  function filterChampions(query, limit){
+    var tKR = normKRText(query);
+    var tEN = normENText(query);
+    if(!tKR && !tEN) return [];
+    var out = [];
+    for(var i=0;i<CHAMP_DB.length;i++){
+      var c = CHAMP_DB[i];
+      if((tKR && c.normKR.indexOf(tKR)!==-1) || (tEN && c.normEN.indexOf(tEN)!==-1)){
+        out.push({ idx:i, champ:c });
+        if(out.length>=limit) break;
+      }
+    }
+    return out;
+  }
+
+  function pickDropdownItemsHtml(results){
+    return results.map(function(r){
+      return '<button type="button" class="pick-dropdown-item" data-champ="'+r.idx+'">'+
+        '<span class="pdi-icon"><img src="'+championImgUrl(r.champ.id)+'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'"></span>'+
+        '<span class="pdi-name">'+escapeHtml(r.champ.name)+'</span>'+
+      '</button>';
+    }).join("");
+  }
+
+  function pickSearchHtml(playerId, slot, value){
+    var v = value || "";
+    return '<div class="pick-search">'+
+      pickIconHtml(v)+
+      '<div class="pick-search-box">'+
+        '<input type="text" class="pick-search-input" autocomplete="off" placeholder="챔피언 검색" value="'+escapeHtml(v)+'" data-scope="picksearch" data-id="'+playerId+'" data-slot="'+slot+'">'+
+        '<div class="pick-dropdown" hidden></div>'+
+      '</div>'+
+    '</div>';
+  }
+
+  var state = load();
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      if(!raw) return defaultState();
+      var parsed = JSON.parse(raw);
+      if(!parsed || !parsed.phase) return defaultState();
+      return parsed;
+    }catch(e){ return defaultState(); }
+  }
+  function save(){
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  function findTeam(id){ return state.teams.filter(function(t){return t.id===id;})[0]; }
+  function findPlayer(id){ return state.players.filter(function(p){return p.id===id;})[0]; }
+  function remainingSlots(team){ return team.slots - team.roster.length; }
+
+  function showError(msg){
+    var el = document.getElementById("bidError");
+    if(!el) return;
+    el.textContent = msg;
+    clearTimeout(showError._t);
+    showError._t = setTimeout(function(){ if(el) el.textContent=""; }, 3000);
+  }
+
+  /* ---------------- actions ---------------- */
+
+  var actions = {};
+
+  actions.addTeam = function(){
+    state.teams.push({ id:uid(), name:"", total:1000, slots:5, remaining:1000, roster:[] });
+    render(); save();
+  };
+  actions.removeTeam = function(id){
+    state.teams = state.teams.filter(function(t){ return t.id!==id; });
+    render(); save();
+  };
+  actions.loadSample = function(){
+    var teamNames = ["레드팀","블루팀","옐로팀","그린팀"];
+    state.teams = teamNames.map(function(n){
+      return { id:uid(), name:n, total:1000, slots:5, remaining:1000, roster:[] };
+    });
+    var positions = ["탑","정글","미드","원딜","서폿"];
+    var players = [];
+    for(var i=1;i<=16;i++){
+      var p0 = CHAMP_DB[(i*3)%CHAMP_DB.length].name;
+      var p1 = CHAMP_DB[(i*3+1)%CHAMP_DB.length].name;
+      var p2 = CHAMP_DB[(i*3+2)%CHAMP_DB.length].name;
+      players.push({ id:uid(), name:"선수"+(i<10?"0"+i:i), position:positions[(i-1)%5], picks:[p0,p1,p2], status:"queued", soldTeamId:null, price:0 });
+    }
+    state.players = players;
+    render(); save();
+  };
+  actions.addPlayers = function(){
+    var ta = document.getElementById("playersText");
+    if(!ta) return;
+    var lines = ta.value.split(/\n/).map(function(l){return l.trim();}).filter(Boolean);
+    lines.forEach(function(line){
+      var parts = line.split(",");
+      var name = (parts[0]||"").trim();
+      var position = (parts[1]||"").trim();
+      var picksRaw = (parts[2]||"").trim();
+      var picks = picksRaw ? picksRaw.split("/").map(function(s){return s.trim();}).slice(0,3) : [];
+      while(picks.length<3) picks.push("");
+      if(!name) return;
+      state.players.push({ id:uid(), name:name, position:position, picks:picks, status:"queued", soldTeamId:null, price:0 });
+    });
+    ta.value = "";
+    render(); save();
+  };
+  actions.removePlayer = function(id){
+    state.players = state.players.filter(function(p){ return p.id!==id; });
+    render(); save();
+  };
+
+  function canStart(){
+    if(state.teams.length < 2) return false;
+    if(state.players.length < 1) return false;
+    for(var i=0;i<state.teams.length;i++){
+      var t = state.teams[i];
+      if(!t.name || !t.name.trim()) return false;
+      if(!(t.total>0)) return false;
+      if(!(t.slots>=1)) return false;
+    }
+    return true;
+  }
+
+  actions.startAuction = function(){
+    if(!canStart()) return;
+    state.teams.forEach(function(t){ t.remaining = t.total; t.roster=[]; });
+    state.players.forEach(function(p){ p.status="queued"; p.soldTeamId=null; p.price=0; });
+    state.order = shuffle(state.players.map(function(p){return p.id;}));
+    state.passedOrder = [];
+    state.current = null;
+    state.log = [];
+    state.phase = "auction";
+    goNext();
+  };
+
+  function goNext(){
+    if(state.order.length===0){
+      state.current = null;
+      if(state.passedOrder.length===0){
+        state.phase = "finished";
+      }
+      render(); save();
+      return;
+    }
+    var pid = state.order.shift();
+    var player = findPlayer(pid);
+    if(player) player.status = "active";
+    state.current = {
+      playerId: pid, bid:0, bidTeamId:null, history:[],
+      timerValue: state.config.timerSeconds, timerRunning:false, resolved:false, resultText:""
+    };
+    render(); save();
+  }
+  actions.nextPlayer = goNext;
+
+  function applyBid(teamId, amount){
+    var cur = state.current;
+    if(!cur || cur.resolved) return;
+    var team = findTeam(teamId);
+    if(!team){ return; }
+    if(cur.bidTeamId===teamId){ showError("이미 최고 입찰 팀입니다"); return; }
+    if(remainingSlots(team)<=0){ showError(team.name+" 로스터가 가득 찼습니다"); return; }
+    if(!(amount>0)){ showError("올바른 금액을 입력하세요"); return; }
+    if(amount<=cur.bid){ showError("현재가보다 높은 금액을 입력하세요"); return; }
+    if(amount>team.remaining){ showError(team.name+"의 포인트가 부족합니다"); return; }
+    cur.bid = amount;
+    cur.bidTeamId = teamId;
+    cur.history.unshift({ teamName:team.name, amount:amount });
+    cur.timerValue = state.config.timerSeconds;
+    render(); save();
+  }
+  actions.quickBid = function(teamId){
+    var cur = state.current;
+    if(!cur) return;
+    var amount = cur.bid>0 ? cur.bid + state.config.increment : state.config.startBid;
+    applyBid(teamId, amount);
+  };
+  actions.customBid = function(){
+    var sel = document.getElementById("customTeam");
+    var amt = document.getElementById("customAmount");
+    if(!sel || !amt) return;
+    var teamId = sel.value;
+    var amount = parseInt(amt.value,10);
+    if(!teamId){ showError("팀을 선택하세요"); return; }
+    applyBid(teamId, amount);
+    amt.value = "";
+  };
+
+  actions.startTimer = function(){
+    if(state.current && !state.current.resolved){
+      state.current.timerRunning = true;
+      render(); save();
+    }
+  };
+  actions.pauseTimer = function(){
+    if(state.current){ state.current.timerRunning = false; render(); save(); }
+  };
+  actions.addTime = function(sec){
+    if(state.current && !state.current.resolved){
+      state.current.timerValue = Math.max(0, state.current.timerValue + parseInt(sec,10));
+      updateTimerUI(); save();
+    }
+  };
+
+  function resolveSold(){
+    var cur = state.current;
+    if(!cur || !cur.bidTeamId || cur.resolved) return;
+    var team = findTeam(cur.bidTeamId);
+    var player = findPlayer(cur.playerId);
+    if(!team || !player) return;
+    team.remaining -= cur.bid;
+    team.roster.push({ playerId:player.id, name:player.name, position:player.position, price:cur.bid });
+    player.status = "sold"; player.soldTeamId = team.id; player.price = cur.bid;
+    cur.timerRunning = false; cur.resolved = true;
+    cur.resultText = team.name + " 낙찰 · " + cur.bid + "P";
+    state.log.unshift({ type:"sold", text: player.name + " → " + team.name + " (" + cur.bid + "P)" });
+    render(); save();
+  }
+  function resolvePassed(){
+    var cur = state.current;
+    if(!cur || cur.resolved) return;
+    var player = findPlayer(cur.playerId);
+    if(!player) return;
+    player.status = "passed";
+    state.passedOrder.push(player.id);
+    cur.timerRunning = false; cur.resolved = true;
+    cur.resultText = "유찰";
+    state.log.unshift({ type:"passed", text: player.name + " 유찰" });
+    render(); save();
+  }
+  actions.sellNow = resolveSold;
+  actions.passNow = resolvePassed;
+
+  actions.requeuePassed = function(id){
+    var idx = state.passedOrder.indexOf(id);
+    if(idx<0) return;
+    state.passedOrder.splice(idx,1);
+    var player = findPlayer(id);
+    if(player) player.status = "queued";
+    state.order.push(id);
+    render(); save();
+  };
+
+  actions.endAuction = function(){
+    if(!confirm("경매를 지금 종료할까요? 남은 선수는 결과에서 미판매로 표시됩니다.")) return;
+    state.phase = "finished";
+    state.current = null;
+    render(); save();
+  };
+  actions.resetAll = function(){
+    if(!confirm("모든 데이터를 초기화하고 새로 시작할까요? 되돌릴 수 없습니다.")) return;
+    state = defaultState();
+    render(); save();
+  };
+
+  actions.copyResults = function(){
+    var text = buildResultText();
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        toast("결과가 클립보드에 복사되었습니다");
+      }).catch(function(){ toast("복사에 실패했습니다. 아래 상자에서 직접 복사하세요"); });
+    }else{
+      toast("아래 상자에서 직접 복사하세요");
+    }
+  };
+  function toast(msg){
+    var el = document.getElementById("finishToast");
+    if(!el) return;
+    el.textContent = msg;
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ if(el) el.textContent=""; }, 3000);
+  }
+
+  function buildResultText(){
+    var lines = ["=== 내전 경매 결과 ==="];
+    state.teams.forEach(function(t){
+      lines.push("");
+      lines.push("["+t.name+"] "+(t.total-t.remaining)+"P 사용 / "+t.total+"P");
+      if(t.roster.length===0){ lines.push(" - (없음)"); }
+      t.roster.forEach(function(r){
+        lines.push(" - "+r.name+(r.position?" ("+r.position+")":"")+" : "+r.price+"P");
+      });
+    });
+    var unsold = state.players.filter(function(p){ return p.status!=="sold"; });
+    if(unsold.length){
+      lines.push("");
+      lines.push("[미판매]");
+      unsold.forEach(function(p){ lines.push(" - "+p.name); });
+    }
+    return lines.join("\n");
+  }
+
+  /* ---------------- rendering ---------------- */
+
+  var app = document.getElementById("app");
+
+  function updateTimerUI(){
+    var cur = state.current;
+    if(!cur) return;
+    var valEl = document.getElementById("timerValue");
+    var fillEl = document.getElementById("timerFill");
+    var boxEl = document.getElementById("timerBox");
+    if(valEl) valEl.textContent = cur.timerValue;
+    if(fillEl) fillEl.style.width = Math.max(0, (cur.timerValue/state.config.timerSeconds)*100) + "%";
+    if(boxEl) boxEl.classList.toggle("urgent", cur.timerValue<=5);
+  }
+
+  function render(){
+    var html = headerHtml();
+    if(state.phase==="setup") html += setupHtml();
+    else if(state.phase==="auction") html += auctionHtml();
+    else html += finishedHtml();
+    app.innerHTML = html;
+  }
+
+  function headerHtml(){
+    var mid = "";
+    var right = "";
+    if(state.phase==="auction"){
+      var done = state.players.filter(function(p){return p.status==="sold"||p.status==="passed";}).length;
+      mid = '<div class="header-mid">진행 <span class="num">'+done+' / '+state.players.length+'</span></div>';
+      right = '<button class="btn btn-danger btn-sm" data-action="endAuction">경매 종료</button>'+
+              '<button class="btn btn-ghost btn-sm" data-action="resetAll">초기화</button>';
+    }else if(state.phase==="finished"){
+      right = '<button class="btn btn-ghost btn-sm" data-action="resetAll">새 경매 시작</button>';
+    }
+    return '<div class="header">'+
+      '<div class="brand"><span class="brand-mark">내전 경매</span><span class="brand-sub">진행자 콘솔</span></div>'+
+      mid+
+      '<div class="header-right">'+right+'</div>'+
+    '</div>';
+  }
+
+  function setupHtml(){
+    var teamRows = state.teams.map(function(t){
+      return '<div class="team-row">'+
+        '<div><span class="field-label">팀 이름</span>'+
+          '<input type="text" placeholder="예: 레드팀" value="'+escapeHtml(t.name)+'" data-scope="team" data-id="'+t.id+'" data-field="name"></div>'+
+        '<div><span class="field-label">포인트</span>'+
+          '<input type="number" min="0" step="10" value="'+t.total+'" data-scope="team" data-id="'+t.id+'" data-field="total"></div>'+
+        '<div><span class="field-label">슬롯</span>'+
+          '<input type="number" min="1" max="12" value="'+t.slots+'" data-scope="team" data-id="'+t.id+'" data-field="slots"></div>'+
+        '<button class="row-remove" title="팀 삭제" data-action="removeTeam" data-id="'+t.id+'">&times;</button>'+
+      '</div>';
+    }).join("");
+
+    var playerRows = state.players.map(function(p){
+      var picks = p.picks || ["","",""];
+      return '<div class="player-row" data-id="'+p.id+'">'+
+        '<input type="text" value="'+escapeHtml(p.name)+'" placeholder="이름" data-scope="player" data-id="'+p.id+'" data-field="name">'+
+        '<input type="text" value="'+escapeHtml(p.position||"")+'" placeholder="포지션" data-scope="player" data-id="'+p.id+'" data-field="position">'+
+        pickSearchHtml(p.id, 0, picks[0])+
+        pickSearchHtml(p.id, 1, picks[1])+
+        pickSearchHtml(p.id, 2, picks[2])+
+        '<button class="row-remove" title="삭제" data-action="removePlayer" data-id="'+p.id+'">&times;</button>'+
+      '</div>';
+    }).join("");
+
+    var startOk = canStart();
+    var hint = "";
+    if(!startOk){
+      if(state.teams.length<2) hint = "팀을 2개 이상 등록하세요";
+      else if(state.players.length<1) hint = "선수를 1명 이상 등록하세요";
+      else hint = "팀 이름과 포인트/슬롯을 모두 채워주세요";
+    }
+
+    return '<div class="setup-shell"><div class="setup-grid">'+
+      '<div><div class="setup-title">내전 경매 설정</div>'+
+      '<div class="setup-lede">팀과 선수를 등록하고 경매를 시작하세요. 진행자 한 명이 모든 입찰을 조작하는 콘솔입니다.</div></div>'+
+
+      '<div class="card">'+
+        '<div class="card-head"><h2>팀</h2>'+
+          '<div style="display:flex;gap:8px;">'+
+            '<button class="btn btn-ghost btn-sm" data-action="loadSample">샘플로 채우기</button>'+
+            '<button class="btn btn-sm" data-action="addTeam">+ 팀 추가</button>'+
+          '</div></div>'+
+        teamRows+
+      '</div>'+
+
+      '<div class="card">'+
+        '<div class="card-head"><h2>경매 옵션</h2></div>'+
+        '<div class="config-grid">'+
+          '<div><span class="field-label">시작 입찰가</span><input type="number" min="0" step="10" value="'+state.config.startBid+'" data-scope="config" data-field="startBid"></div>'+
+          '<div><span class="field-label">입찰 단위</span><input type="number" min="1" step="10" value="'+state.config.increment+'" data-scope="config" data-field="increment"></div>'+
+          '<div><span class="field-label">타이머(초)</span><input type="number" min="5" step="5" value="'+state.config.timerSeconds+'" data-scope="config" data-field="timerSeconds"></div>'+
+        '</div>'+
+      '</div>'+
+
+      '<div class="card">'+
+        '<div class="card-head"><h2>선수 목록</h2><span class="hint">한 줄에 한 명, "이름,포지션,챔프1/챔프2/챔프3" 형식 가능</span></div>'+
+        '<textarea id="playersText" placeholder="예)&#10;페이커,미드,아지르/아리/르블랑&#10;쇼메이커,미드,신드라&#10;구마유시,원딜"></textarea>'+
+        '<div style="margin-top:8px;"><button class="btn btn-sm" data-action="addPlayers">선수 추가</button></div>'+
+        '<div class="player-count">등록된 선수 '+state.players.length+'명 · 모스트픽 칸에 챔피언 이름을 검색해 등록하세요</div>'+
+        '<div class="player-table">'+
+          '<div class="player-row head"><span>이름</span><span>포지션</span><span>모스트픽 1</span><span>모스트픽 2</span><span>모스트픽 3</span><span></span></div>'+
+          (playerRows || '<div class="empty-note">아직 등록된 선수가 없습니다</div>')+
+        '</div>'+
+      '</div>'+
+
+      '<div class="start-bar">'+
+        '<div class="start-hint">'+hint+'</div>'+
+        '<button class="btn btn-accent" '+(startOk?'':'disabled')+' data-action="startAuction">경매 시작</button>'+
+      '</div>'+
+
+    '</div></div>';
+  }
+
+  function slotHtml(team){
+    var out = "";
+    for(var i=0;i<team.slots;i++){
+      var r = team.roster[i];
+      if(r){
+        out += '<div class="slot filled"><span class="slot-name">'+escapeHtml(r.name)+'</span><span class="slot-price">'+r.price+'P</span></div>';
+      }else{
+        out += '<div class="slot">빈 슬롯</div>';
+      }
+    }
+    return out;
+  }
+
+  function teamsColumnHtml(){
+    var cur = state.current;
+    return state.teams.map(function(t){
+      var leading = cur && cur.bidTeamId===t.id ? " leading" : "";
+      return '<div class="team-card'+leading+'">'+
+        '<div class="team-card-head"><span class="team-card-name">'+escapeHtml(t.name)+'</span>'+
+          '<span class="team-card-pts"><span class="num">'+t.remaining+'</span>P <span class="total">/ '+t.total+'P</span></span></div>'+
+        '<div class="slots">'+slotHtml(t)+'</div>'+
+      '</div>';
+    }).join("");
+  }
+
+  function auctionHtml(){
+    var left = '<div class="panel-title">팀 현황</div>'+teamsColumnHtml();
+    var right = queueColumnHtml();
+    var center = state.current ? stageWithPlayerHtml() : stageEmptyHtml();
+    return '<div class="layout">'+
+      '<div class="panel">'+left+'</div>'+
+      '<div class="panel" style="overflow-y:auto;border-right:none;padding:0;">'+center+'</div>'+
+      '<div class="panel">'+right+'</div>'+
+    '</div>';
+  }
+
+  function queueColumnHtml(){
+    var upcoming = state.order.map(function(pid, i){
+      var p = findPlayer(pid);
+      if(!p) return "";
+      return '<div class="queue-item"><span class="qi-idx num">'+(i+1)+'</span><span class="qi-name">'+escapeHtml(p.name)+
+        (p.position?' <span class="badge-pos" style="padding:1px 6px;">'+escapeHtml(p.position)+'</span>':'')+'</span></div>';
+    }).join("");
+    var passed = state.passedOrder.map(function(pid){
+      var p = findPlayer(pid);
+      if(!p) return "";
+      return '<div class="passed-item"><span class="qi-name">'+escapeHtml(p.name)+'</span>'+
+        '<button class="btn btn-sm" data-action="requeuePassed" data-id="'+pid+'">다시 넣기</button></div>';
+    }).join("");
+    return '<div class="panel-title">경매 순서 ('+state.order.length+')</div>'+
+      (upcoming || '<div class="empty-note">대기 중인 선수가 없습니다</div>')+
+      '<div class="panel-title" style="margin-top:18px;">유찰 목록 ('+state.passedOrder.length+')</div>'+
+      (passed || '<div class="empty-note">유찰된 선수가 없습니다</div>');
+  }
+
+  function stageEmptyHtml(){
+    var hasPassed = state.passedOrder.length>0;
+    return '<div class="stage"><div class="stage-empty">'+
+      '<h2 style="font-size:18px;">대기열이 비었습니다</h2>'+
+      '<p style="font-size:13px;max-width:320px;">'+(hasPassed
+        ? '유찰 목록에서 선수를 다시 불러오거나, 경매를 종료해 결과를 확인하세요.'
+        : '모든 선수의 경매가 끝났습니다. 경매를 종료해 결과를 확인하세요.')+'</p>'+
+      '<button class="btn btn-accent" data-action="endAuction">경매 종료하고 결과 보기</button>'+
+    '</div></div>';
+  }
+
+  function stageWithPlayerHtml(){
+    var cur = state.current;
+    var player = findPlayer(cur.playerId);
+    var totalCount = state.players.length;
+    var soldOrPassed = state.players.filter(function(p){return p.status==="sold"||p.status==="passed";}).length;
+
+    var teamOptions = state.teams.map(function(t){
+      return '<option value="'+t.id+'">'+escapeHtml(t.name)+'</option>';
+    }).join("");
+
+    var bidButtons = state.teams.map(function(t){
+      var full = remainingSlots(t)<=0;
+      var isLeading = cur.bidTeamId===t.id;
+      var nextAmt = cur.bid>0 ? cur.bid+state.config.increment : state.config.startBid;
+      var affordable = nextAmt<=t.remaining;
+      var disabled = cur.resolved || full || isLeading || !affordable;
+      var reason = full ? "슬롯 마감" : (isLeading ? "최고 입찰중" : (!affordable ? "포인트 부족" : ""));
+      return '<button class="team-bid-btn" data-action="quickBid" data-id="'+t.id+'" '+(disabled?'disabled':'')+'>'+
+        '<span class="tb-name">'+escapeHtml(t.name)+'</span>'+
+        '<span class="tb-amount">'+(reason || (nextAmt+'P 입찰'))+'</span>'+
+      '</button>';
+    }).join("");
+
+    var picks = player && player.picks ? player.picks : [];
+    var hasPicks = picks.some(function(p){ return p && p.trim(); });
+    var mostPickHtml = hasPicks
+      ? '<div class="mostpick"><span class="mostpick-label">MOST PICK</span><div class="mostpick-icons">'+
+          pickIconHtml(picks[0],"lg")+pickIconHtml(picks[1],"lg")+pickIconHtml(picks[2],"lg")+
+        '</div></div>'
+      : "";
+
+    var log = cur.history.slice(0,8).map(function(h){
+      return '<li class="log-item"><span>'+escapeHtml(h.teamName)+'</span><span class="amt">'+h.amount+'P</span></li>';
+    }).join("");
+
+    var resultBanner = cur.resolved
+      ? '<div class="result-banner'+(cur.resultText==='유찰'?' passed':'')+'"><strong>'+cur.resultText+'</strong>'+
+        '<button class="btn btn-accent" data-action="nextPlayer">다음 선수 &rarr;</button></div>'
+      : "";
+
+    var controls = cur.resolved ? "" : (
+      '<div class="controls-card">'+
+        '<div>'+
+          '<div class="controls-row-title">팀별 빠른 입찰</div>'+
+          '<div class="team-bid-grid">'+bidButtons+'</div>'+
+        '</div>'+
+        '<div>'+
+          '<div class="controls-row-title">직접 입력</div>'+
+          '<div class="custom-bid-row">'+
+            '<select id="customTeam">'+teamOptions+'</select>'+
+            '<input type="number" id="customAmount" placeholder="금액" min="0" step="10" style="width:100px;">'+
+            '<button class="btn btn-sm" data-action="customBid">입찰</button>'+
+          '</div>'+
+        '</div>'+
+        '<div class="error-msg" id="bidError"></div>'+
+        '<div class="action-row">'+
+          '<button class="btn" data-action="startTimer" '+(cur.timerRunning?'disabled':'')+'>&#9654; 타이머 시작</button>'+
+          '<button class="btn" data-action="pauseTimer" '+(cur.timerRunning?'':'disabled')+'>&#10074;&#10074; 일시정지</button>'+
+          '<button class="btn" data-action="addTime" data-id="10">+10초</button>'+
+          '<button class="btn btn-accent" data-action="sellNow" '+(cur.bidTeamId?'':'disabled')+'>&#128296; 낙찰 확정</button>'+
+          '<button class="btn btn-danger" data-action="passNow">유찰 처리</button>'+
+        '</div>'+
+      '</div>'
+    );
+
+    return '<div class="stage">'+
+      '<div class="player-card">'+
+        '<div class="player-top">'+
+          '<div class="player-name-row"><span class="player-name">'+escapeHtml(player?player.name:"")+'</span>'+
+            (player&&player.position?'<span class="badge-pos">'+escapeHtml(player.position)+'</span>':'')+'</div>'+
+          '<span class="player-idx">'+(soldOrPassed+1)+' / '+totalCount+'</span>'+
+        '</div>'+
+        mostPickHtml+
+        '<div class="bid-now">'+
+          '<div class="bid-amount-wrap">'+
+            '<span class="bid-amount-label">현재가</span>'+
+            '<span class="bid-amount num">'+cur.bid+'P</span>'+
+            '<span class="bid-team">'+(cur.bidTeamId? escapeHtml(findTeam(cur.bidTeamId).name)+" 최고가" : "입찰 대기중")+'</span>'+
+          '</div>'+
+          '<div class="timer-box" id="timerBox">'+
+            '<div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:'+(cur.timerValue/state.config.timerSeconds*100)+'%;"></div></div>'+
+            '<span class="timer-num num" id="timerValue">'+cur.timerValue+'</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+      resultBanner+
+      controls+
+      '<div>'+
+        '<div class="controls-row-title">입찰 기록</div>'+
+        '<ul class="log-list">'+(log||'<li class="empty-note">아직 입찰이 없습니다</li>')+'</ul>'+
+      '</div>'+
+    '</div>';
+  }
+
+  function finishedHtml(){
+    var teams = state.teams.map(function(t){
+      var used = t.total - t.remaining;
+      var roster = t.roster.map(function(r){
+        return '<li><span>'+escapeHtml(r.name)+(r.position?' ('+escapeHtml(r.position)+')':'')+'</span><span class="p-price">'+r.price+'P</span></li>';
+      }).join("");
+      return '<div class="result-team-card"><h3>'+escapeHtml(t.name)+'</h3>'+
+        '<div class="pts num">'+used+'P 사용 / '+t.total+'P</div>'+
+        '<ul class="result-roster">'+(roster||'<li class="empty-note">영입 없음</li>')+'</ul>'+
+      '</div>';
+    }).join("");
+
+    return '<div class="finish-shell"><div class="finish-grid">'+
+      '<div><div class="setup-title">경매 결과</div><div class="setup-lede">팀별 최종 로스터입니다.</div></div>'+
+      '<div class="result-teams">'+teams+'</div>'+
+      '<div class="card">'+
+        '<div class="card-head"><h2>결과 내보내기</h2>'+
+          '<div style="display:flex;align-items:center;gap:10px;">'+
+            '<span id="finishToast" style="font-size:12px;color:var(--accent-strong);"></span>'+
+            '<button class="btn btn-accent btn-sm" data-action="copyResults">결과 복사</button>'+
+          '</div></div>'+
+        '<textarea class="copy-box" readonly>'+escapeHtml(buildResultText())+'</textarea>'+
+      '</div>'+
+    '</div></div>';
+  }
+
+  /* ---------------- events ---------------- */
+
+  app.addEventListener("click", function(e){
+    var btn = e.target.closest("[data-action]");
+    if(!btn) return;
+    var action = btn.getAttribute("data-action");
+    var id = btn.getAttribute("data-id");
+    if(actions[action]) actions[action](id);
+  });
+
+  app.addEventListener("input", function(e){
+    var el = e.target;
+    var scope = el.dataset.scope;
+    if(!scope) return;
+    var field = el.dataset.field;
+
+    if(scope==="team"){
+      if(!field) return;
+      var team = findTeam(el.dataset.id);
+      if(!team) return;
+      if(field==="name") team.name = el.value;
+      else if(field==="total") team.total = Math.max(0, parseInt(el.value||"0",10));
+      else if(field==="slots") team.slots = Math.max(1, parseInt(el.value||"1",10));
+      save();
+      var startBtn = app.querySelector('[data-action="startAuction"]');
+      if(startBtn) startBtn.disabled = !canStart();
+    }else if(scope==="config"){
+      if(!field) return;
+      state.config[field] = Math.max(0, parseInt(el.value||"0",10));
+      save();
+    }else if(scope==="player"){
+      if(!field) return;
+      var player = findPlayer(el.dataset.id);
+      if(!player) return;
+      if(field==="name") player.name = el.value;
+      else if(field==="position") player.position = el.value;
+      save();
+    }else if(scope==="picksearch"){
+      var dropdown = el.parentElement.querySelector(".pick-dropdown");
+      if(!dropdown) return;
+      var results = filterChampions(el.value, 8);
+      if(results.length){
+        dropdown.innerHTML = pickDropdownItemsHtml(results);
+        dropdown.hidden = false;
+      }else{
+        dropdown.innerHTML = "";
+        dropdown.hidden = true;
+      }
+    }
+  });
+
+  app.addEventListener("focusin", function(e){
+    var el = e.target;
+    if(!el.dataset || el.dataset.scope!=="picksearch") return;
+    var dropdown = el.parentElement.querySelector(".pick-dropdown");
+    if(!dropdown || !el.value) return;
+    var results = filterChampions(el.value, 8);
+    if(results.length){
+      dropdown.innerHTML = pickDropdownItemsHtml(results);
+      dropdown.hidden = false;
+    }
+  });
+
+  app.addEventListener("focusout", function(e){
+    var el = e.target;
+    if(!el.dataset || el.dataset.scope!=="picksearch") return;
+    var player = findPlayer(el.dataset.id);
+    var slot = parseInt(el.dataset.slot,10);
+    if(player){
+      if(!player.picks) player.picks = ["","",""];
+      player.picks[slot] = el.value;
+      save();
+    }
+    var wrap = el.closest(".pick-search");
+    var iconEl = wrap ? wrap.querySelector(".pick-icon") : null;
+    if(iconEl) iconEl.outerHTML = pickIconHtml(el.value);
+    var dropdown = el.parentElement.querySelector(".pick-dropdown");
+    if(dropdown){ dropdown.hidden = true; dropdown.innerHTML = ""; }
+  });
+
+  app.addEventListener("mousedown", function(e){
+    var item = e.target.closest(".pick-dropdown-item");
+    if(!item) return;
+    e.preventDefault();
+    var box = item.closest(".pick-search-box");
+    var input = box ? box.querySelector(".pick-search-input") : null;
+    if(!input) return;
+    var champ = CHAMP_DB[parseInt(item.getAttribute("data-champ"),10)];
+    if(!champ) return;
+    var player = findPlayer(input.dataset.id);
+    var slot = parseInt(input.dataset.slot,10);
+    if(!player) return;
+    if(!player.picks) player.picks = ["","",""];
+    player.picks[slot] = champ.name;
+    input.value = champ.name;
+    var wrap = input.closest(".pick-search");
+    var iconEl = wrap ? wrap.querySelector(".pick-icon") : null;
+    if(iconEl) iconEl.outerHTML = pickIconHtml(champ.name);
+    var dropdown = box.querySelector(".pick-dropdown");
+    if(dropdown){ dropdown.hidden = true; dropdown.innerHTML = ""; }
+    save();
+  });
+
+  app.addEventListener("keydown", function(e){
+    var el = e.target;
+    if(!el.dataset || el.dataset.scope!=="picksearch") return;
+    if(e.key==="Escape"){
+      var dropdown = el.parentElement.querySelector(".pick-dropdown");
+      if(dropdown){ dropdown.hidden = true; dropdown.innerHTML = ""; }
+      el.blur();
+    }else if(e.key==="Enter"){
+      e.preventDefault();
+      var box = el.closest(".pick-search-box");
+      var firstItem = box ? box.querySelector(".pick-dropdown-item") : null;
+      if(firstItem) firstItem.dispatchEvent(new MouseEvent("mousedown", { bubbles:true }));
+      el.blur();
+    }
+  });
+
+  /* ---------------- timer loop ---------------- */
+
+  setInterval(function(){
+    if(state.phase!=="auction" || !state.current || !state.current.timerRunning || state.current.resolved) return;
+    state.current.timerValue -= 1;
+    if(state.current.timerValue<=0){
+      state.current.timerValue = 0;
+      state.current.timerRunning = false;
+      if(state.current.bidTeamId) resolveSold(); else resolvePassed();
+    }else{
+      updateTimerUI();
+      save();
+    }
+  }, 1000);
+
+  render();
+})();
+</script>
