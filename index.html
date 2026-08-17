@@ -112,7 +112,7 @@
   .player-count{ font-size:12px; color:var(--text-faint); margin:10px 0 6px; }
   .player-table{ display:flex; flex-direction:column; gap:4px; }
   .player-row{
-    display:grid; grid-template-columns:minmax(120px,1fr) 84px 148px 148px 148px 30px;
+    display:grid; grid-template-columns:minmax(120px,1fr) 84px 148px 148px 148px minmax(160px,1fr) 30px;
     gap:8px; align-items:center;
   }
   .player-row.head{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em; padding:0 0 2px; }
@@ -146,6 +146,7 @@
   .mostpick{ display:flex; align-items:center; gap:12px; margin:2px 0 4px; }
   .mostpick-label{ font-size:10px; letter-spacing:.08em; color:var(--text-faint); writing-mode:vertical-rl; text-orientation:mixed; }
   .mostpick-icons{ display:flex; gap:8px; }
+  .player-desc{ font-size:13px; color:var(--text-dim); margin:-4px 0 10px; }
 
   .start-bar{ display:flex; align-items:center; justify-content:space-between; gap:16px; padding-top:6px; }
   .start-hint{ font-size:12px; color:var(--bad); min-height:16px; }
@@ -474,7 +475,7 @@
       var p0 = CHAMP_DB[(i*3)%CHAMP_DB.length].name;
       var p1 = CHAMP_DB[(i*3+1)%CHAMP_DB.length].name;
       var p2 = CHAMP_DB[(i*3+2)%CHAMP_DB.length].name;
-      players.push({ id:uid(), name:"선수"+(i<10?"0"+i:i), position:positions[(i-1)%5], picks:[p0,p1,p2], status:"queued", soldTeamId:null, price:0 });
+      players.push({ id:uid(), name:"선수"+(i<10?"0"+i:i), position:positions[(i-1)%5], picks:[p0,p1,p2], desc:"", status:"queued", soldTeamId:null, price:0 });
     }
     state.players = players;
     render(); save();
@@ -488,10 +489,11 @@
       var name = (parts[0]||"").trim();
       var position = (parts[1]||"").trim();
       var picksRaw = (parts[2]||"").trim();
+      var desc = (parts[3]||"").trim();
       var picks = picksRaw ? picksRaw.split("/").map(function(s){return s.trim();}).slice(0,3) : [];
       while(picks.length<3) picks.push("");
       if(!name) return;
-      state.players.push({ id:uid(), name:name, position:position, picks:picks, status:"queued", soldTeamId:null, price:0 });
+      state.players.push({ id:uid(), name:name, position:position, picks:picks, desc:desc, status:"queued", soldTeamId:null, price:0 });
     });
     ta.value = "";
     render(); save();
@@ -744,6 +746,7 @@
         pickSearchHtml(p.id, 0, picks[0])+
         pickSearchHtml(p.id, 1, picks[1])+
         pickSearchHtml(p.id, 2, picks[2])+
+        '<input type="text" value="'+escapeHtml(p.desc||"")+'" placeholder="한줄설명" data-scope="player" data-id="'+p.id+'" data-field="desc">'+
         '<button class="row-remove" title="삭제" data-action="removePlayer" data-id="'+p.id+'">&times;</button>'+
       '</div>';
     }).join("");
@@ -779,12 +782,12 @@
       '</div>'+
 
       '<div class="card">'+
-        '<div class="card-head"><h2>선수 목록</h2><span class="hint">한 줄에 한 명, "이름,포지션,챔프1/챔프2/챔프3" 형식 가능</span></div>'+
-        '<textarea id="playersText" placeholder="예)&#10;페이커,미드,아지르/아리/르블랑&#10;쇼메이커,미드,신드라&#10;구마유시,원딜"></textarea>'+
+        '<div class="card-head"><h2>선수 목록</h2><span class="hint">한 줄에 한 명, "이름,포지션,챔프1/챔프2/챔프3,한줄설명" 형식 가능</span></div>'+
+        '<textarea id="playersText" placeholder="예)&#10;페이커,미드,아지르/아리/르블랑,미드 장인입니다&#10;쇼메이커,미드,신드라&#10;구마유시,원딜"></textarea>'+
         '<div style="margin-top:8px;"><button class="btn btn-sm" data-action="addPlayers">선수 추가</button></div>'+
         '<div class="player-count">등록된 선수 '+state.players.length+'명 · 모스트픽 칸에 챔피언 이름을 검색해 등록하세요</div>'+
         '<div class="player-table">'+
-          '<div class="player-row head"><span>이름</span><span>포지션</span><span>모스트픽 1</span><span>모스트픽 2</span><span>모스트픽 3</span><span></span></div>'+
+          '<div class="player-row head"><span>이름</span><span>포지션</span><span>모스트픽 1</span><span>모스트픽 2</span><span>모스트픽 3</span><span>한줄설명</span><span></span></div>'+
           (playerRows || '<div class="empty-note">아직 등록된 선수가 없습니다</div>')+
         '</div>'+
       '</div>'+
@@ -893,6 +896,9 @@
           pickIconHtml(picks[0],"lg")+pickIconHtml(picks[1],"lg")+pickIconHtml(picks[2],"lg")+
         '</div></div>'
       : "";
+    var descHtml = player && player.desc && player.desc.trim()
+      ? '<div class="player-desc">'+escapeHtml(player.desc)+'</div>'
+      : "";
 
     var log = cur.history.slice(0,8).map(function(h){
       return '<li class="log-item"><span>'+escapeHtml(h.teamName)+'</span><span class="amt">'+h.amount+'P</span></li>';
@@ -935,6 +941,7 @@
             (player&&player.position?'<span class="badge-pos">'+escapeHtml(player.position)+'</span>':'')+'</div>'+
           '<span class="player-idx">'+(soldOrPassed+1)+' / '+totalCount+'</span>'+
         '</div>'+
+        descHtml+
         mostPickHtml+
         '<div class="bid-now">'+
           '<div class="bid-amount-wrap">'+
@@ -1019,6 +1026,7 @@
       if(!player) return;
       if(field==="name") player.name = el.value;
       else if(field==="position") player.position = el.value;
+      else if(field==="desc") player.desc = el.value;
       save();
     }else if(scope==="picksearch"){
       var dropdown = el.parentElement.querySelector(".pick-dropdown");
