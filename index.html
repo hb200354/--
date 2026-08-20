@@ -126,6 +126,13 @@
   }
   .row-remove:hover{ background:var(--bad-dim); color:var(--bad); border-color:var(--bad); }
 
+  .waiting-team-row{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:10px 0; border-bottom:1px solid var(--border-soft);
+  }
+  .waiting-team-row:last-child{ border-bottom:none; }
+  .waiting-team-name{ font-weight:700; font-size:14px; color:var(--text); }
+
   .config-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
 
   .player-count{ font-size:12px; color:var(--text-faint); margin:10px 0 6px; }
@@ -744,6 +751,14 @@
       try{ localStorage.setItem(ROOM_ID_KEY, roomId); }catch(e){}
       attachSync();
     }
+    state.phase = "waiting";
+    render(); save();
+  };
+  actions.backToSetup = function(){
+    state.phase = "setup";
+    render(); save();
+  };
+  actions.beginBidding = function(){
     state.teams.forEach(function(t){ t.remaining = t.total; t.roster=[]; });
     state.players.forEach(function(p){ p.status="queued"; p.soldTeamId=null; p.price=0; });
     state.order = shuffle(state.players.map(function(p){return p.id;}));
@@ -909,6 +924,12 @@
   actions.copyCaptainLink = function(teamId){
     var team = findTeam(teamId);
     if(!team) return;
+    if(fbEnabled && !roomId){
+      roomId = genRoomId();
+      try{ localStorage.setItem(ROOM_ID_KEY, roomId); }catch(e){}
+      attachSync();
+      save();
+    }
     var link = captainLink(teamId);
     if(navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(link).then(function(){
@@ -916,6 +937,22 @@
       }).catch(function(){ globalToast(link); });
     }else{
       globalToast(link);
+    }
+  };
+  actions.copyAllCaptainLinks = function(){
+    if(fbEnabled && !roomId){
+      roomId = genRoomId();
+      try{ localStorage.setItem(ROOM_ID_KEY, roomId); }catch(e){}
+      attachSync();
+      save();
+    }
+    var text = state.teams.map(function(t){ return t.name+": "+captainLink(t.id); }).join("\n");
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(function(){
+        globalToast("모든 팀장 링크가 복사되었습니다");
+      }).catch(function(){ globalToast("복사에 실패했습니다"); });
+    }else{
+      globalToast("복사에 실패했습니다");
     }
   };
 
@@ -979,6 +1016,7 @@
     }
     var html = headerHtml();
     if(state.phase==="setup") html += setupHtml();
+    else if(state.phase==="waiting") html += waitingHtml();
     else if(state.phase==="auction") html += auctionHtml();
     else html += finishedHtml();
     app.innerHTML = html;
@@ -987,7 +1025,10 @@
   function headerHtml(){
     var mid = "";
     var right = "";
-    if(state.phase==="auction"){
+    if(state.phase==="waiting"){
+      mid = '<div class="header-mid">팀장 연결 대기중</div>';
+      right = '<button class="btn btn-ghost btn-sm" data-action="resetAll">초기화</button>';
+    }else if(state.phase==="auction"){
       var done = state.players.filter(function(p){return p.status==="sold"||p.status==="passed";}).length;
       mid = '<div class="header-mid">진행 <span class="num">'+done+' / '+state.players.length+'</span></div>';
       right = '<button class="btn btn-danger btn-sm" data-action="endAuction">경매 종료</button>'+
@@ -1071,7 +1112,34 @@
 
       '<div class="start-bar">'+
         '<div class="start-hint">'+hint+'</div>'+
-        '<button class="btn btn-accent" '+(startOk?'':'disabled')+' data-action="startAuction">경매 시작</button>'+
+        '<button class="btn btn-accent" '+(startOk?'':'disabled')+' data-action="startAuction">팀장 초대하기 &rarr;</button>'+
+      '</div>'+
+
+    '</div></div>';
+  }
+
+  function waitingHtml(){
+    var rows = state.teams.map(function(t){
+      return '<div class="waiting-team-row">'+
+        '<span class="waiting-team-name">'+escapeHtml(t.name)+'</span>'+
+        '<button class="btn btn-sm" data-action="copyCaptainLink" data-id="'+t.id+'">링크 복사</button>'+
+      '</div>';
+    }).join("");
+
+    return '<div class="setup-shell"><div class="setup-grid">'+
+      '<div><div class="setup-title">팀장 연결 대기중</div>'+
+      '<div class="setup-lede">아래 링크를 각 팀장에게 보내주세요. 팀장이 휴대폰에서 링크를 열면 대기 화면이 뜨고, 경매를 시작하면 자동으로 입찰 화면으로 전환됩니다.</div></div>'+
+
+      '<div class="card">'+
+        '<div class="card-head"><h2>팀장 링크</h2>'+
+          '<button class="btn btn-ghost btn-sm" data-action="copyAllCaptainLinks">전체 복사</button>'+
+        '</div>'+
+        rows+
+      '</div>'+
+
+      '<div class="start-bar">'+
+        '<button class="btn btn-ghost" data-action="backToSetup">&larr; 설정으로 돌아가기</button>'+
+        '<button class="btn btn-accent" data-action="beginBidding">경매 시작</button>'+
       '</div>'+
 
     '</div></div>';
@@ -1104,7 +1172,7 @@
     var cur = state.current;
     return state.teams.map(function(t){
       var leading = cur && cur.bidTeamId===t.id ? " leading" : "";
-      var linkBtn = (fbEnabled && roomId)
+      var linkBtn = fbEnabled
         ? '<button class="btn btn-sm btn-ghost captain-link-btn" data-action="copyCaptainLink" data-id="'+t.id+'" title="팀장 입찰 링크 복사">&#128279;</button>'
         : "";
       return '<div class="team-card'+leading+'">'+
@@ -1273,7 +1341,10 @@
       return captainMessageHtml("팀을 찾을 수 없습니다", "운영자에게 새 링크를 요청해주세요.");
     }
     if(state.phase==="setup"){
-      return captainMessageHtml(team.name+" 팀장 화면", "운영자가 경매를 시작하면 여기에 입찰 화면이 표시됩니다.");
+      return captainMessageHtml(team.name+" 팀장 화면", "운영자가 아직 팀/선수를 설정 중입니다. 잠시만 기다려주세요.");
+    }
+    if(state.phase==="waiting"){
+      return captainMessageHtml(team.name+" 연결 완료!", "운영자가 경매를 시작하면 이 화면이 자동으로 입찰 화면으로 바뀝니다. 이 페이지를 켜둔 채로 기다려주세요.");
     }
     if(state.phase==="finished"){
       return captainMessageHtml(team.name+" 팀장 화면", "경매가 종료되었습니다. 수고하셨습니다!");
