@@ -138,7 +138,7 @@
   .player-count{ font-size:12px; color:var(--text-faint); margin:10px 0 6px; }
   .player-table{ display:flex; flex-direction:column; gap:4px; }
   .player-row{
-    display:grid; grid-template-columns:minmax(120px,1fr) 84px 148px 148px 148px minmax(160px,1fr) 30px;
+    display:grid; grid-template-columns:36px minmax(120px,1fr) 84px 148px 148px 148px minmax(160px,1fr) 30px;
     gap:8px; align-items:center;
   }
   .player-row.head{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em; padding:0 0 2px; }
@@ -397,10 +397,63 @@
   .captain-bid-btn{ font-size:17px; padding:16px; }
   .captain-shell .custom-bid-row{ gap:8px; }
   .captain-shell .custom-bid-row input{ flex:1; min-width:0; }
+
+  /* ---------- player photo upload + crop modal ---------- */
+  .photo-pick-btn{
+    width:32px; height:32px; border-radius:6px; overflow:hidden; padding:0;
+    border:1px solid var(--border); background:var(--surface-2); cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .photo-pick-btn:hover{ border-color:var(--accent); }
+  .photo-pick-btn img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .photo-pick-placeholder{ color:var(--text-faint); font-size:16px; line-height:1; }
+
+  .crop-overlay{
+    position:fixed; inset:0; background:rgba(5,3,1,.8); z-index:100;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .crop-overlay[hidden]{ display:none; }
+  .crop-dialog{
+    background:linear-gradient(180deg,var(--surface),var(--bg-2)); border:1px solid var(--border);
+    border-radius:var(--radius); padding:20px; display:flex; flex-direction:column; gap:12px;
+    box-shadow:var(--shadow-card);
+  }
+  .crop-title{ font-family:var(--font-display); font-size:15px; font-weight:700; color:var(--accent-strong); }
+  .crop-hint{ font-size:11px; color:var(--text-faint); margin-top:-8px; }
+  .crop-viewport{
+    width:220px; height:331px; overflow:hidden; position:relative;
+    border-radius:6px; border:1px solid var(--border); background:#000;
+    cursor:grab; touch-action:none; align-self:center;
+  }
+  .crop-viewport.dragging{ cursor:grabbing; }
+  .crop-viewport img{
+    position:absolute; left:0; top:0; transform-origin:0 0;
+    user-select:none; -webkit-user-drag:none; pointer-events:none; max-width:none;
+  }
+  .crop-controls{ display:flex; align-items:center; gap:10px; }
+  .crop-zoom-label{ font-size:11px; color:var(--text-faint); white-space:nowrap; }
+  .crop-controls input[type=range]{ flex:1; width:auto; }
+  .crop-actions{ display:flex; justify-content:flex-end; gap:8px; }
 </style>
 
 <div id="app"></div>
 <div id="globalToast" class="global-toast"></div>
+<input type="file" id="photoFileInput" accept="image/*" hidden>
+<div id="cropOverlay" class="crop-overlay" hidden>
+  <div class="crop-dialog">
+    <div class="crop-title">사진 위치 조정</div>
+    <div class="crop-hint">드래그로 위치, 슬라이더로 확대/축소</div>
+    <div class="crop-viewport" id="cropViewport"><img id="cropImg" alt=""></div>
+    <div class="crop-controls">
+      <span class="crop-zoom-label">확대</span>
+      <input type="range" id="cropZoom" min="100" max="300" value="100">
+    </div>
+    <div class="crop-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="cropCancelBtn">취소</button>
+      <button type="button" class="btn btn-accent btn-sm" id="cropApplyBtn">적용</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
@@ -615,10 +668,10 @@
   }
 
   /* portrait frame: shows member/<선수이름>.png when a file matches, with the player's name captioned bottom-right */
-  function showcasePortraitHtml(name){
-    var n = String(name||"").trim();
+  function showcasePortraitHtml(player){
+    var n = player && player.name ? String(player.name).trim() : "";
     if(!n) return '<div class="showcase-portrait-box"></div>';
-    var src = "member/"+encodeURIComponent(n)+".png";
+    var src = player.photoDataUrl ? player.photoDataUrl : ("member/"+encodeURIComponent(n)+".png");
     return '<div class="showcase-portrait-box">'+
       '<img class="showcase-portrait-img" src="'+src+'" alt="" loading="lazy" onerror="this.remove();">'+
       '<span class="showcase-portrait-name">'+escapeHtml(n)+'</span>'+
@@ -766,6 +819,13 @@
   actions.removePlayer = function(id){
     state.players = state.players.filter(function(p){ return p.id!==id; });
     render(); save();
+  };
+
+  var pendingPhotoPlayerId = null;
+  actions.pickPlayerPhoto = function(playerId){
+    pendingPhotoPlayerId = playerId;
+    var input = document.getElementById("photoFileInput");
+    if(input) input.click();
   };
 
   function canStart(){
@@ -1094,7 +1154,9 @@
 
     var playerRows = state.players.map(function(p){
       var picks = p.picks || ["","",""];
+      var photoThumb = p.photoDataUrl ? '<img src="'+p.photoDataUrl+'" alt="">' : '<span class="photo-pick-placeholder">&#43;</span>';
       return '<div class="player-row" data-id="'+p.id+'">'+
+        '<button type="button" class="photo-pick-btn" title="사진 업로드/변경" data-action="pickPlayerPhoto" data-id="'+p.id+'">'+photoThumb+'</button>'+
         '<input type="text" value="'+escapeHtml(p.name)+'" placeholder="이름" data-scope="player" data-id="'+p.id+'" data-field="name">'+
         '<input type="text" value="'+escapeHtml(p.position||"")+'" placeholder="포지션" data-scope="player" data-id="'+p.id+'" data-field="position">'+
         pickSearchHtml(p.id, 0, picks[0])+
@@ -1141,7 +1203,7 @@
         '<div style="margin-top:8px;"><button class="btn btn-sm" data-action="addPlayers">선수 추가</button></div>'+
         '<div class="player-count">등록된 선수 '+state.players.length+'명 · 모스트픽 칸에 챔피언 이름을 검색해 등록하세요</div>'+
         '<div class="player-table">'+
-          '<div class="player-row head"><span>이름</span><span>포지션</span><span>모스트픽 1</span><span>모스트픽 2</span><span>모스트픽 3</span><span>한줄 소감</span><span></span></div>'+
+          '<div class="player-row head"><span>사진</span><span>이름</span><span>포지션</span><span>모스트픽 1</span><span>모스트픽 2</span><span>모스트픽 3</span><span>한줄 소감</span><span></span></div>'+
           (playerRows || '<div class="empty-note">아직 등록된 선수가 없습니다</div>')+
         '</div>'+
       '</div>'+
@@ -1275,7 +1337,7 @@
       '<div class="showcase-wrap">'+
         '<div class="showcase-kicker"><span class="num">'+(soldOrPassed+1)+' / '+totalCount+'</span></div>'+
         '<div class="showcase-card">'+
-          showcasePortraitHtml(player&&player.name)+
+          showcasePortraitHtml(player)+
           showcasePickHtml(picks[0],"p1")+showcasePickHtml(picks[1],"p2")+showcasePickHtml(picks[2],"p3")+
           '<div class="showcase-meta-zone">'+
             (player&&player.position?'<span class="badge-pos">'+escapeHtml(player.position)+'</span>':'')+
@@ -1407,7 +1469,7 @@
     var showcaseHtml =
       '<div class="showcase-wrap">'+
         '<div class="showcase-card">'+
-          showcasePortraitHtml(player&&player.name)+
+          showcasePortraitHtml(player)+
           showcasePickHtml(picks[0],"p1")+showcasePickHtml(picks[1],"p2")+showcasePickHtml(picks[2],"p3")+
           '<div class="showcase-meta-zone">'+
             (player&&player.position?'<span class="badge-pos">'+escapeHtml(player.position)+'</span>':'')+
@@ -1574,6 +1636,132 @@
       el.blur();
     }
   });
+
+  /* ---------------- player photo upload + crop ---------------- */
+
+  var PHOTO_MAX_BYTES = 8*1024*1024;
+  var PHOTO_CROP_RATIO = 220/331; // matches the showcase portrait frame's aspect ratio
+  var PHOTO_OUT_W = 480;
+  var PHOTO_OUT_H = Math.round(PHOTO_OUT_W/PHOTO_CROP_RATIO);
+
+  var photoFileInput = document.getElementById("photoFileInput");
+  var cropOverlay = document.getElementById("cropOverlay");
+  var cropViewport = document.getElementById("cropViewport");
+  var cropImgEl = document.getElementById("cropImg");
+  var cropZoomInput = document.getElementById("cropZoom");
+  var cropApplyBtn = document.getElementById("cropApplyBtn");
+  var cropCancelBtn = document.getElementById("cropCancelBtn");
+
+  var cropCtx = null;   // { playerId, img, cw, ch, baseScale, zoom, offsetX, offsetY }
+  var cropDrag = null;  // { startX, startY, startOffsetX, startOffsetY }
+
+  function closeCropModal(){
+    if(cropOverlay) cropOverlay.hidden = true;
+    cropCtx = null;
+    cropDrag = null;
+  }
+
+  function clampCropOffsets(){
+    var scale = cropCtx.baseScale*cropCtx.zoom;
+    var dw = cropCtx.img.naturalWidth*scale, dh = cropCtx.img.naturalHeight*scale;
+    cropCtx.offsetX = Math.min(0, Math.max(cropCtx.cw-dw, cropCtx.offsetX));
+    cropCtx.offsetY = Math.min(0, Math.max(cropCtx.ch-dh, cropCtx.offsetY));
+  }
+  function applyCropTransform(){
+    if(!cropCtx || !cropImgEl) return;
+    clampCropOffsets();
+    var scale = cropCtx.baseScale*cropCtx.zoom;
+    cropImgEl.style.transform = "translate("+cropCtx.offsetX+"px,"+cropCtx.offsetY+"px) scale("+scale+")";
+  }
+
+  function openCropModal(playerId, dataUrl){
+    if(!cropOverlay || !cropViewport || !cropImgEl) return;
+    var img = new Image();
+    img.onload = function(){
+      var cw = cropViewport.clientWidth || 220, ch = cropViewport.clientHeight || 331;
+      var baseScale = Math.max(cw/img.naturalWidth, ch/img.naturalHeight);
+      cropCtx = {
+        playerId: playerId, img: img, cw: cw, ch: ch, baseScale: baseScale, zoom: 1,
+        offsetX: (cw-img.naturalWidth*baseScale)/2,
+        offsetY: (ch-img.naturalHeight*baseScale)/2
+      };
+      cropImgEl.src = dataUrl;
+      cropImgEl.style.width = img.naturalWidth+"px";
+      cropImgEl.style.height = img.naturalHeight+"px";
+      if(cropZoomInput) cropZoomInput.value = 100;
+      applyCropTransform();
+      cropOverlay.hidden = false;
+    };
+    img.src = dataUrl;
+  }
+
+  if(photoFileInput){
+    photoFileInput.addEventListener("change", function(){
+      var file = photoFileInput.files && photoFileInput.files[0];
+      photoFileInput.value = "";
+      if(!file || !pendingPhotoPlayerId) return;
+      if(!/^image\//.test(file.type)){ globalToast("이미지 파일만 업로드할 수 있습니다"); return; }
+      if(file.size > PHOTO_MAX_BYTES){ globalToast("사진 용량은 8MB 이하로 올려주세요"); return; }
+      var reader = new FileReader();
+      reader.onload = function(){ openCropModal(pendingPhotoPlayerId, reader.result); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  if(cropViewport){
+    var onCropMove = function(x,y){
+      if(!cropDrag || !cropCtx) return;
+      cropCtx.offsetX = cropDrag.startOffsetX + (x-cropDrag.startX);
+      cropCtx.offsetY = cropDrag.startOffsetY + (y-cropDrag.startY);
+      applyCropTransform();
+    };
+    var onCropStart = function(x,y){
+      if(!cropCtx) return;
+      cropDrag = { startX:x, startY:y, startOffsetX:cropCtx.offsetX, startOffsetY:cropCtx.offsetY };
+      cropViewport.classList.add("dragging");
+    };
+    var onCropEnd = function(){
+      cropDrag = null;
+      cropViewport.classList.remove("dragging");
+    };
+    cropViewport.addEventListener("mousedown", function(e){ onCropStart(e.clientX, e.clientY); });
+    window.addEventListener("mousemove", function(e){ if(cropDrag) onCropMove(e.clientX, e.clientY); });
+    window.addEventListener("mouseup", onCropEnd);
+    cropViewport.addEventListener("touchstart", function(e){
+      var t = e.touches[0]; onCropStart(t.clientX, t.clientY);
+    }, { passive:true });
+    cropViewport.addEventListener("touchmove", function(e){
+      var t = e.touches[0]; onCropMove(t.clientX, t.clientY);
+    }, { passive:true });
+    cropViewport.addEventListener("touchend", onCropEnd);
+  }
+
+  if(cropZoomInput){
+    cropZoomInput.addEventListener("input", function(){
+      if(!cropCtx) return;
+      cropCtx.zoom = parseInt(cropZoomInput.value,10)/100;
+      applyCropTransform();
+    });
+  }
+
+  if(cropCancelBtn) cropCancelBtn.addEventListener("click", closeCropModal);
+
+  if(cropApplyBtn){
+    cropApplyBtn.addEventListener("click", function(){
+      if(!cropCtx) return;
+      var canvas = document.createElement("canvas");
+      canvas.width = PHOTO_OUT_W; canvas.height = PHOTO_OUT_H;
+      var ctx = canvas.getContext("2d");
+      var scale = cropCtx.baseScale*cropCtx.zoom;
+      var srcX = -cropCtx.offsetX/scale, srcY = -cropCtx.offsetY/scale;
+      var srcW = cropCtx.cw/scale, srcH = cropCtx.ch/scale;
+      ctx.drawImage(cropCtx.img, srcX, srcY, srcW, srcH, 0, 0, PHOTO_OUT_W, PHOTO_OUT_H);
+      var dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      var player = findPlayer(cropCtx.playerId);
+      if(player){ player.photoDataUrl = dataUrl; render(); save(); }
+      closeCropModal();
+    });
+  }
 
   /* ---------------- timer loop (admin device only — captains just read the synced value) ---------------- */
 
