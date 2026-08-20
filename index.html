@@ -657,7 +657,7 @@
     if(player) player.status = "active";
     state.current = {
       playerId: pid, bid:0, bidTeamId:null, history:[],
-      timerValue: state.config.timerSeconds, timerRunning:false, resolved:false, resultText:""
+      timerValue: state.config.timerSeconds, timerRunning:true, resolved:false, resultText:""
     };
     render(); save();
   }
