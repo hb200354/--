@@ -50,6 +50,7 @@
 
   /* ---------- shell ---------- */
   #app{ min-height:100vh; display:flex; flex-direction:column; min-width:1080px; overflow-x:auto; }
+  #app.captain-app{ min-width:0; overflow-x:hidden; }
   .header{
     height:56px; flex:0 0 auto;
     display:flex; align-items:center; justify-content:space-between;
@@ -357,14 +358,115 @@
   ::-webkit-scrollbar{ width:10px; height:10px; }
   ::-webkit-scrollbar-thumb{ background:var(--surface-3); border-radius:6px; }
   ::-webkit-scrollbar-track{ background:transparent; }
+
+  /* ---------- global toast ---------- */
+  .global-toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%);
+    background:var(--surface-3); border:1px solid var(--accent); color:var(--text);
+    padding:10px 18px; border-radius:var(--radius-sm); font-size:13px;
+    box-shadow:var(--shadow-card); z-index:80; opacity:0; pointer-events:none;
+    transition:opacity .2s;
+  }
+  .global-toast.show{ opacity:1; }
+  .captain-link-btn{ margin-bottom:8px; }
+
+  /* ---------- captain (mobile bidder) view ---------- */
+  .captain-shell{
+    min-height:100vh; max-width:480px; margin:0 auto;
+    padding:16px 16px 40px; display:flex; flex-direction:column; gap:14px;
+  }
+  .captain-header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding-bottom:10px; border-bottom:1px solid var(--border);
+  }
+  .captain-team-name{ font-family:var(--font-display); font-size:19px; font-weight:700; color:var(--accent-strong); }
+  .captain-pts{ font-size:14px; color:var(--accent-strong); font-weight:700; }
+  .captain-pts .total{ color:var(--text-faint); font-weight:500; }
+  .captain-message{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:8px; padding:60px 20px; color:var(--text-dim);
+  }
+  .captain-message h2{ font-family:var(--font-display); font-size:18px; color:var(--accent-strong); }
+  .captain-bid-btn{ font-size:17px; padding:16px; }
+  .captain-shell .custom-bid-row{ gap:8px; }
+  .captain-shell .custom-bid-row input{ flex:1; min-width:0; }
 </style>
 
 <div id="app"></div>
+<div id="globalToast" class="global-toast"></div>
 
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <script>
 (function(){
   "use strict";
   var STORE_KEY = "naejeon_auction_state_v1";
+  var ROOM_ID_KEY = "naejeon_room_id_v1";
+  var ROOM_PATH_PREFIX = "naejeon_rooms/";
+
+  var FIREBASE_CONFIG = {
+    apiKey: "AIzaSyDCFY9RTwdxOmp0yT2dyZ-jG9aVVApqE_Y",
+    authDomain: "wildrift-1792b.firebaseapp.com",
+    databaseURL: "https://wildrift-1792b-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "wildrift-1792b",
+    storageBucket: "wildrift-1792b.firebasestorage.app",
+    messagingSenderId: "886511346722",
+    appId: "1:886511346722:web:54a713321f94e8c229d67b"
+  };
+  var fbDb = null, fbEnabled = false;
+  try{
+    if(typeof firebase!=="undefined"){
+      firebase.initializeApp(FIREBASE_CONFIG);
+      fbDb = firebase.database();
+      fbEnabled = true;
+    }
+  }catch(e){ fbEnabled = false; }
+
+  var urlQuery = new URLSearchParams(location.search);
+  var IS_CAPTAIN_VIEW = urlQuery.get("view")==="captain" && !!urlQuery.get("team");
+  var CAPTAIN_TEAM_ID = urlQuery.get("team") || "";
+  var roomId = urlQuery.get("room") || "";
+  if(!roomId && !IS_CAPTAIN_VIEW){
+    try{ roomId = localStorage.getItem(ROOM_ID_KEY) || ""; }catch(e){}
+  }
+  var fbListenerAttached = false;
+  var fbSyncedOnce = false;
+
+  function roomRef(path){
+    return fbDb.ref(ROOM_PATH_PREFIX + roomId + (path?"/"+path:""));
+  }
+  function genRoomId(){
+    return Math.random().toString(36).slice(2,8).toUpperCase();
+  }
+  /* Firebase RTDB silently drops empty arrays/objects and null values on
+     write, so anything that can legitimately be empty comes back as
+     undefined and needs restoring before the rest of the app touches it. */
+  function normalizeRemoteState(s){
+    if(!s) return s;
+    s.teams = (s.teams||[]).map(function(t){ t.roster = t.roster||[]; return t; });
+    s.players = (s.players||[]).map(function(p){ p.picks = p.picks||["","",""]; return p; });
+    s.order = s.order||[];
+    s.passedOrder = s.passedOrder||[];
+    s.log = s.log||[];
+    if(s.current) s.current.history = s.current.history||[];
+    return s;
+  }
+  function attachSync(){
+    if(!fbEnabled || !roomId || fbListenerAttached) return;
+    fbListenerAttached = true;
+    roomRef().on("value", function(snap){
+      var remote = snap.val();
+      fbSyncedOnce = true;
+      if(remote){
+        state = normalizeRemoteState(remote);
+        render();
+      }
+    });
+  }
+  function captainLink(teamId){
+    var base = location.origin + location.pathname;
+    return base + "?view=captain&room=" + encodeURIComponent(roomId) + "&team=" + encodeURIComponent(teamId);
+  }
 
   function defaultState(){
     return {
@@ -529,8 +631,10 @@
   }
 
   var state = load();
+  if(roomId) attachSync();
 
   function load(){
+    if(IS_CAPTAIN_VIEW) return defaultState();
     try{
       var raw = localStorage.getItem(STORE_KEY);
       if(!raw) return defaultState();
@@ -540,7 +644,9 @@
     }catch(e){ return defaultState(); }
   }
   function save(){
+    if(IS_CAPTAIN_VIEW) return;
     try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+    if(fbEnabled && roomId){ roomRef().set(state).catch(function(){}); }
   }
 
   function findTeam(id){ return state.teams.filter(function(t){return t.id===id;})[0]; }
@@ -633,6 +739,11 @@
 
   actions.startAuction = function(){
     if(!canStart()) return;
+    if(fbEnabled && !roomId){
+      roomId = genRoomId();
+      try{ localStorage.setItem(ROOM_ID_KEY, roomId); }catch(e){}
+      attachSync();
+    }
     state.teams.forEach(function(t){ t.remaining = t.total; t.roster=[]; });
     state.players.forEach(function(p){ p.status="queued"; p.soldTeamId=null; p.price=0; });
     state.order = shuffle(state.players.map(function(p){return p.id;}));
@@ -676,6 +787,27 @@
     if(!(amount>0)){ showError("올바른 금액을 입력하세요"); return; }
     if(amount<=cur.bid){ showError("현재가보다 높은 금액을 입력하세요"); return; }
     if(amount>team.remaining){ showError(team.name+"의 포인트가 부족합니다"); return; }
+
+    if(fbEnabled && roomId){
+      /* transaction scoped to /current so simultaneous bids from different
+         captains resolve atomically against the freshest server value */
+      roomRef("current").transaction(function(remoteCur){
+        if(remoteCur==null) return remoteCur;
+        if(remoteCur.resolved) return;
+        if(remoteCur.bidTeamId===teamId) return;
+        if(amount<=remoteCur.bid) return;
+        remoteCur.bid = amount;
+        remoteCur.bidTeamId = teamId;
+        remoteCur.history = [{ teamName:team.name, amount:amount }].concat(remoteCur.history||[]);
+        remoteCur.timerValue = state.config.timerSeconds;
+        return remoteCur;
+      }, function(error, committed){
+        if(error){ showError("연결 오류, 다시 시도해주세요"); return; }
+        if(!committed){ showError("다른 팀이 먼저 입찰했습니다"); return; }
+      });
+      return;
+    }
+
     cur.bid = amount;
     cur.bidTeamId = teamId;
     cur.history.unshift({ teamName:team.name, amount:amount });
@@ -688,14 +820,14 @@
     var amount = cur.bid>0 ? cur.bid + state.config.increment : state.config.startBid;
     applyBid(teamId, amount);
   };
-  actions.customBid = function(){
-    var sel = document.getElementById("customTeam");
-    var amt = document.getElementById("customAmount");
-    if(!sel || !amt) return;
-    var teamId = sel.value;
+  actions.captainQuickBid = function(){
+    actions.quickBid(CAPTAIN_TEAM_ID);
+  };
+  actions.captainCustomBid = function(){
+    var amt = document.getElementById("captainCustomAmount");
+    if(!amt) return;
     var amount = parseInt(amt.value,10);
-    if(!teamId){ showError("팀을 선택하세요"); return; }
-    applyBid(teamId, amount);
+    applyBid(CAPTAIN_TEAM_ID, amount);
     amt.value = "";
   };
 
@@ -766,6 +898,27 @@
     render(); save();
   };
 
+  function globalToast(msg){
+    var el = document.getElementById("globalToast");
+    if(!el) return;
+    el.textContent = msg;
+    el.classList.add("show");
+    clearTimeout(globalToast._t);
+    globalToast._t = setTimeout(function(){ el.classList.remove("show"); }, 2500);
+  }
+  actions.copyCaptainLink = function(teamId){
+    var team = findTeam(teamId);
+    if(!team) return;
+    var link = captainLink(teamId);
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(link).then(function(){
+        globalToast(team.name+" 팀장 링크가 복사되었습니다");
+      }).catch(function(){ globalToast(link); });
+    }else{
+      globalToast(link);
+    }
+  };
+
   actions.copyResults = function(){
     var text = buildResultText();
     if(navigator.clipboard && navigator.clipboard.writeText){
@@ -819,6 +972,11 @@
   }
 
   function render(){
+    if(IS_CAPTAIN_VIEW){
+      app.classList.add("captain-app");
+      app.innerHTML = captainAppHtml();
+      return;
+    }
     var html = headerHtml();
     if(state.phase==="setup") html += setupHtml();
     else if(state.phase==="auction") html += auctionHtml();
@@ -946,9 +1104,13 @@
     var cur = state.current;
     return state.teams.map(function(t){
       var leading = cur && cur.bidTeamId===t.id ? " leading" : "";
+      var linkBtn = (fbEnabled && roomId)
+        ? '<button class="btn btn-sm btn-ghost captain-link-btn" data-action="copyCaptainLink" data-id="'+t.id+'" title="팀장 입찰 링크 복사">&#128279;</button>'
+        : "";
       return '<div class="team-card'+leading+'">'+
         '<div class="team-card-head"><span class="team-card-name">'+escapeHtml(t.name)+'</span>'+
           '<span class="team-card-pts"><span class="num">'+t.remaining+'</span>P <span class="total">/ '+t.total+'P</span></span></div>'+
+        linkBtn+
         positionChipsHtml(t)+
         '<div class="slots">'+slotHtml(t)+'</div>'+
       '</div>';
@@ -1002,25 +1164,6 @@
     var totalCount = state.players.length;
     var soldOrPassed = state.players.filter(function(p){return p.status==="sold"||p.status==="passed";}).length;
 
-    var teamOptions = state.teams.map(function(t){
-      return '<option value="'+t.id+'">'+escapeHtml(t.name)+'</option>';
-    }).join("");
-
-    var curPos = player && player.position ? player.position.trim() : "";
-    var bidButtons = state.teams.map(function(t){
-      var full = remainingSlots(t)<=0;
-      var positionTaken = curPos && teamHasPosition(t, curPos);
-      var isLeading = cur.bidTeamId===t.id;
-      var nextAmt = cur.bid>0 ? cur.bid+state.config.increment : state.config.startBid;
-      var affordable = nextAmt<=t.remaining;
-      var disabled = cur.resolved || full || positionTaken || isLeading || !affordable;
-      var reason = full ? "슬롯 마감" : (positionTaken ? "포지션 중복" : (isLeading ? "최고 입찰중" : (!affordable ? "포인트 부족" : "")));
-      return '<button class="team-bid-btn" data-action="quickBid" data-id="'+t.id+'" '+(disabled?'disabled':'')+'>'+
-        '<span class="tb-name">'+escapeHtml(t.name)+'</span>'+
-        '<span class="tb-amount">'+(reason || (nextAmt+'P 입찰'))+'</span>'+
-      '</button>';
-    }).join("");
-
     var picks = player && player.picks ? player.picks : [];
     var desc = player && player.desc ? player.desc.trim() : "";
 
@@ -1048,19 +1191,7 @@
 
     var controls = cur.resolved ? "" : (
       '<div class="controls-card">'+
-        '<div>'+
-          '<div class="controls-row-title">팀별 빠른 입찰</div>'+
-          '<div class="team-bid-grid">'+bidButtons+'</div>'+
-        '</div>'+
-        '<div>'+
-          '<div class="controls-row-title">직접 입력</div>'+
-          '<div class="custom-bid-row">'+
-            '<select id="customTeam">'+teamOptions+'</select>'+
-            '<input type="number" id="customAmount" placeholder="금액" min="0" step="10" style="width:100px;">'+
-            '<button class="btn btn-sm" data-action="customBid">입찰</button>'+
-          '</div>'+
-        '</div>'+
-        '<div class="error-msg" id="bidError"></div>'+
+        '<div class="controls-row-title">진행 조작 · 입찰은 팀장 휴대폰에서 진행됩니다</div>'+
         '<div class="action-row">'+
           '<button class="btn" data-action="startTimer" '+(cur.timerRunning?'disabled':'')+'>&#9654; 타이머 시작</button>'+
           '<button class="btn" data-action="pauseTimer" '+(cur.timerRunning?'':'disabled')+'>&#10074;&#10074; 일시정지</button>'+
@@ -1119,6 +1250,102 @@
         '<textarea class="copy-box" readonly>'+escapeHtml(buildResultText())+'</textarea>'+
       '</div>'+
     '</div></div>';
+  }
+
+  /* ---------------- captain (mobile bidder) view ---------------- */
+
+  function captainMessageHtml(title, body){
+    return '<div class="captain-shell"><div class="captain-message">'+
+      '<h2>'+escapeHtml(title)+'</h2>'+
+      (body?'<p>'+escapeHtml(body)+'</p>':'')+
+    '</div></div>';
+  }
+
+  function captainAppHtml(){
+    if(!roomId){
+      return captainMessageHtml("잘못된 링크입니다", "운영자에게 받은 링크를 다시 확인해주세요.");
+    }
+    if(!fbSyncedOnce){
+      return captainMessageHtml("연결 중...", "잠시만 기다려주세요.");
+    }
+    var team = findTeam(CAPTAIN_TEAM_ID);
+    if(!team){
+      return captainMessageHtml("팀을 찾을 수 없습니다", "운영자에게 새 링크를 요청해주세요.");
+    }
+    if(state.phase==="setup"){
+      return captainMessageHtml(team.name+" 팀장 화면", "운영자가 경매를 시작하면 여기에 입찰 화면이 표시됩니다.");
+    }
+    if(state.phase==="finished"){
+      return captainMessageHtml(team.name+" 팀장 화면", "경매가 종료되었습니다. 수고하셨습니다!");
+    }
+
+    var cur = state.current;
+    var header =
+      '<div class="captain-header">'+
+        '<span class="captain-team-name">'+escapeHtml(team.name)+'</span>'+
+        '<span class="captain-pts"><span class="num">'+team.remaining+'</span>P <span class="total">/ '+team.total+'P</span></span>'+
+      '</div>'+
+      positionChipsHtml(team)+
+      '<div class="slots">'+slotHtml(team)+'</div>';
+
+    if(!cur){
+      return '<div class="captain-shell">'+header+
+        '<div class="captain-message"><h2>다음 선수를 기다리는 중</h2></div>'+
+      '</div>';
+    }
+
+    var player = findPlayer(cur.playerId);
+    var picks = player && player.picks ? player.picks : [];
+    var desc = player && player.desc ? player.desc.trim() : "";
+    var showcaseHtml =
+      '<div class="showcase-wrap">'+
+        '<div class="showcase-card">'+
+          showcasePortraitHtml(player&&player.name)+
+          showcasePickHtml(picks[0],"p1")+showcasePickHtml(picks[1],"p2")+showcasePickHtml(picks[2],"p3")+
+          '<div class="showcase-meta-zone">'+
+            (player&&player.position?'<span class="badge-pos">'+escapeHtml(player.position)+'</span>':'')+
+            '<span class="showcase-desc'+(desc?"":" empty")+'">'+escapeHtml(desc)+'</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+
+    var bidNow =
+      '<div class="bid-now">'+
+        '<div class="bid-amount-wrap">'+
+          '<span class="bid-amount-label">현재가</span>'+
+          '<span class="bid-amount num">'+cur.bid+'P</span>'+
+          '<span class="bid-team">'+(cur.bidTeamId? escapeHtml(findTeam(cur.bidTeamId).name)+" 최고가" : "입찰 대기중")+'</span>'+
+        '</div>'+
+        '<div class="timer-box'+(cur.timerValue<=5?' urgent':'')+'">'+
+          '<div class="timer-bar"><div class="timer-fill" style="width:'+(cur.timerValue/state.config.timerSeconds*100)+'%;"></div></div>'+
+          '<span class="timer-num num">'+cur.timerValue+'</span>'+
+        '</div>'+
+      '</div>';
+
+    var bidSection;
+    if(cur.resolved){
+      bidSection = '<div class="result-banner'+(cur.resultText==='유찰'?' passed':'')+'"><strong>'+escapeHtml(cur.resultText)+'</strong></div>';
+    }else{
+      var curPos = player && player.position ? player.position.trim() : "";
+      var full = remainingSlots(team)<=0;
+      var positionTaken = curPos && teamHasPosition(team, curPos);
+      var isLeading = cur.bidTeamId===team.id;
+      var nextAmt = cur.bid>0 ? cur.bid+state.config.increment : state.config.startBid;
+      var affordable = nextAmt<=team.remaining;
+      var disabled = full || positionTaken || isLeading || !affordable;
+      var reason = full ? "슬롯이 가득 찼습니다" : (positionTaken ? curPos+" 포지션 선수가 이미 있습니다" : (isLeading ? "이미 최고 입찰중입니다" : (!affordable ? "포인트가 부족합니다" : "")));
+      bidSection =
+        '<button class="btn btn-accent btn-block captain-bid-btn" data-action="captainQuickBid" '+(disabled?'disabled':'')+'>'+
+          (reason || (nextAmt+'P 입찰'))+
+        '</button>'+
+        '<div class="custom-bid-row">'+
+          '<input type="number" id="captainCustomAmount" placeholder="직접 입력 (포인트)" min="0" step="10">'+
+          '<button class="btn" data-action="captainCustomBid" '+(full||positionTaken?'disabled':'')+'>입찰</button>'+
+        '</div>'+
+        '<div class="error-msg" id="bidError"></div>';
+    }
+
+    return '<div class="captain-shell">'+header+showcaseHtml+bidNow+bidSection+'</div>';
   }
 
   /* ---------------- events ---------------- */
@@ -1241,20 +1468,22 @@
     }
   });
 
-  /* ---------------- timer loop ---------------- */
+  /* ---------------- timer loop (admin device only — captains just read the synced value) ---------------- */
 
-  setInterval(function(){
-    if(state.phase!=="auction" || !state.current || !state.current.timerRunning || state.current.resolved) return;
-    state.current.timerValue -= 1;
-    if(state.current.timerValue<=0){
-      state.current.timerValue = 0;
-      state.current.timerRunning = false;
-      if(state.current.bidTeamId) resolveSold(); else resolvePassed();
-    }else{
-      updateTimerUI();
-      save();
-    }
-  }, 1000);
+  if(!IS_CAPTAIN_VIEW){
+    setInterval(function(){
+      if(state.phase!=="auction" || !state.current || !state.current.timerRunning || state.current.resolved) return;
+      state.current.timerValue -= 1;
+      if(state.current.timerValue<=0){
+        state.current.timerValue = 0;
+        state.current.timerRunning = false;
+        if(state.current.bidTeamId) resolveSold(); else resolvePassed();
+      }else{
+        updateTimerUI();
+        save();
+      }
+    }, 1000);
+  }
 
   render();
 })();
