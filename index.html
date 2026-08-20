@@ -225,6 +225,10 @@
   .showcase-pick.p1{ left:42.6%; width:14.95%; }
   .showcase-pick.p2{ left:59.82%; width:15.02%; }
   .showcase-pick.p3{ left:77.0%; width:15.08%; }
+  .showcase-portrait{
+    position:absolute; left:9.3%; top:13.97%; width:26.9%; height:72.3%;
+    object-fit:cover; object-position:top center; border-radius:2px;
+  }
   .showcase-name-zone{
     position:absolute; left:36.3%; right:1.7%; top:62%; height:22%;
     display:flex; flex-direction:column; justify-content:center; gap:8px; padding:0 1.5%;
@@ -449,6 +453,14 @@
       '<img src="'+championImgUrl(id)+'" alt="'+escapeHtml(label)+'" loading="lazy" onerror="this.parentElement.classList.add(\'fallback\');this.remove();">'+
       '<span class="pick-fallback-text">'+escapeHtml(label)+'</span>'+
     '</div>';
+  }
+
+  /* shows member/<선수이름>.png in the showcase template's portrait frame when a file matches */
+  function showcasePortraitHtml(name){
+    var n = String(name||"").trim();
+    if(!n) return "";
+    var src = "member/"+encodeURIComponent(n)+".png";
+    return '<img class="showcase-portrait" src="'+src+'" alt="" loading="lazy" onerror="this.remove();">';
   }
 
   /* fills one of the three MOST PICK squares in the showcase template */
@@ -970,6 +982,7 @@
       '<div class="showcase-wrap">'+
         '<div class="showcase-kicker"><span class="num">'+(soldOrPassed+1)+' / '+totalCount+'</span></div>'+
         '<div class="showcase-card">'+
+          showcasePortraitHtml(player&&player.name)+
           showcasePickHtml(picks[0],"p1")+showcasePickHtml(picks[1],"p2")+showcasePickHtml(picks[2],"p3")+
           '<div class="showcase-name-zone">'+
             '<span class="showcase-name">'+escapeHtml(player?player.name:"")+'</span>'+
