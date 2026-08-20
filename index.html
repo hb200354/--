@@ -407,9 +407,48 @@
 <script>
 (function(){
   "use strict";
-  var STORE_KEY = "naejeon_auction_state_v1";
-  var ROOM_ID_KEY = "naejeon_room_id_v1";
+  var LEGACY_STORE_KEY = "naejeon_auction_state_v1";
+  var LEGACY_ROOM_ID_KEY = "naejeon_room_id_v1";
   var ROOM_PATH_PREFIX = "naejeon_rooms/";
+
+  function genShortId(){
+    return Math.random().toString(36).slice(2,8).toUpperCase();
+  }
+
+  var urlQuery = new URLSearchParams(location.search);
+  var IS_CAPTAIN_VIEW = urlQuery.get("view")==="captain" && !!urlQuery.get("team");
+  var CAPTAIN_TEAM_ID = urlQuery.get("team") || "";
+
+  /* Each admin URL is its own independent auction, scoped by ?admin= in the
+     address bar, so multiple auctions can run in parallel (different tabs/
+     devices) without sharing localStorage or a Firebase room. Visiting with
+     no ?admin= mints a fresh one and silently updates the URL; revisiting
+     that exact URL later resumes the same auction. */
+  var ADMIN_ID = "";
+  if(!IS_CAPTAIN_VIEW){
+    ADMIN_ID = urlQuery.get("admin") || "";
+    if(!ADMIN_ID){
+      ADMIN_ID = genShortId();
+      urlQuery.set("admin", ADMIN_ID);
+      try{
+        history.replaceState(null, "", location.pathname+"?"+urlQuery.toString()+location.hash);
+      }catch(e){}
+      try{
+        var legacyState = localStorage.getItem(LEGACY_STORE_KEY);
+        if(legacyState){
+          localStorage.setItem("naejeon_auction_state_v1_"+ADMIN_ID, legacyState);
+          localStorage.removeItem(LEGACY_STORE_KEY);
+        }
+        var legacyRoom = localStorage.getItem(LEGACY_ROOM_ID_KEY);
+        if(legacyRoom){
+          localStorage.setItem("naejeon_room_id_v1_"+ADMIN_ID, legacyRoom);
+          localStorage.removeItem(LEGACY_ROOM_ID_KEY);
+        }
+      }catch(e){}
+    }
+  }
+  var STORE_KEY = "naejeon_auction_state_v1_"+ADMIN_ID;
+  var ROOM_ID_KEY = "naejeon_room_id_v1_"+ADMIN_ID;
 
   var FIREBASE_CONFIG = {
     apiKey: "AIzaSyDCFY9RTwdxOmp0yT2dyZ-jG9aVVApqE_Y",
@@ -429,9 +468,6 @@
     }
   }catch(e){ fbEnabled = false; }
 
-  var urlQuery = new URLSearchParams(location.search);
-  var IS_CAPTAIN_VIEW = urlQuery.get("view")==="captain" && !!urlQuery.get("team");
-  var CAPTAIN_TEAM_ID = urlQuery.get("team") || "";
   var roomId = urlQuery.get("room") || "";
   if(!roomId && !IS_CAPTAIN_VIEW){
     try{ roomId = localStorage.getItem(ROOM_ID_KEY) || ""; }catch(e){}
@@ -443,7 +479,7 @@
     return fbDb.ref(ROOM_PATH_PREFIX + roomId + (path?"/"+path:""));
   }
   function genRoomId(){
-    return Math.random().toString(36).slice(2,8).toUpperCase();
+    return genShortId();
   }
   /* Firebase RTDB silently drops empty arrays/objects and null values on
      write, so anything that can legitimately be empty comes back as
