@@ -498,7 +498,7 @@
 
 <audio id="bgmAudio" src="audio/bgm.mp3" loop preload="none"></audio>
 <div class="bgm-bar">
-  <button type="button" id="bgmToggle" class="bgm-toggle" title="배경음악 재생/정지">&#128264;</button>
+  <button type="button" id="bgmToggle" class="bgm-toggle" title="배경음악 끄기/켜기">&#128266;</button>
   <span class="bgm-credit">&#127925; "The Battle" by Marcus Rasseli &middot; CC-BY 3.0 &middot; OpenGameArt.org</span>
 </div>
 
@@ -1182,8 +1182,8 @@
       app.innerHTML = html;
     }
 
-    if(state.phase==="auction") maybePlayBidChime(state.current);
-    else lastChimePlayerId = null;
+    if(state.phase==="auction") syncAuctionSounds(state.current);
+    else soundTrack.playerId = undefined;
 
     if(restore){
       var el = document.getElementById(restore.id);
@@ -1850,33 +1850,55 @@
 
   /* ---------------- background music + bid chime ---------------- */
 
-  var BGM_PREF_KEY = "naejeon_bgm_on_v1";
+  /* Browsers block audio autoplay until the page has been interacted
+     with at all, so "on by default" means: start on the very first
+     click anywhere (not just the speaker button) unless the user has
+     explicitly muted before. The button then just toggles that. */
+  var BGM_MUTED_KEY = "naejeon_bgm_muted_v1";
   var bgmAudio = document.getElementById("bgmAudio");
   var bgmToggle = document.getElementById("bgmToggle");
+  var bgmUserMuted = false;
+  try{ bgmUserMuted = localStorage.getItem(BGM_MUTED_KEY)==="1"; }catch(e){}
+  var bgmStarted = false;
 
-  function setBgmToggleUI(playing){
+  function setBgmToggleUI(){
     if(!bgmToggle) return;
-    bgmToggle.innerHTML = playing ? "&#128266;" : "&#128264;";
+    var playing = bgmAudio && !bgmAudio.paused;
+    bgmToggle.innerHTML = (playing || !bgmUserMuted) ? "&#128266;" : "&#128264;";
     bgmToggle.classList.toggle("playing", playing);
   }
-  if(bgmToggle && bgmAudio){
-    bgmToggle.addEventListener("click", function(){
-      if(bgmAudio.paused){
-        bgmAudio.volume = 0.35;
-        bgmAudio.play().then(function(){
-          setBgmToggleUI(true);
-          try{ localStorage.setItem(BGM_PREF_KEY,"1"); }catch(e){}
-        }).catch(function(){});
-      }else{
-        bgmAudio.pause();
-        setBgmToggleUI(false);
-        try{ localStorage.setItem(BGM_PREF_KEY,"0"); }catch(e){}
-      }
+  function bgmSync(){
+    if(!bgmAudio) return;
+    if(bgmUserMuted){
+      if(!bgmAudio.paused) bgmAudio.pause();
+    }else if(bgmAudio.paused){
+      bgmAudio.volume = 0.35;
+      bgmAudio.play().then(function(){ bgmStarted = true; setBgmToggleUI(); }).catch(function(){});
+    }
+    setBgmToggleUI();
+  }
+  function unlockAudio(){
+    var ctx = getAudioCtx();
+    if(ctx && ctx.state==="suspended") ctx.resume().catch(function(){});
+  }
+  document.addEventListener("click", function(){
+    unlockAudio();
+    if(!bgmStarted) bgmSync();
+  });
+  if(bgmToggle){
+    bgmToggle.addEventListener("click", function(e){
+      e.stopPropagation();
+      unlockAudio();
+      bgmUserMuted = !bgmUserMuted;
+      try{ localStorage.setItem(BGM_MUTED_KEY, bgmUserMuted?"1":"0"); }catch(e){}
+      bgmStarted = true;
+      bgmSync();
     });
   }
+  setBgmToggleUI();
 
-  /* short synthesized "cha-ching" chime played whenever the current bid
-     rises — no audio file needed, so there's nothing to license */
+  /* short synthesized sound effects for bidding/resolving/advancing —
+     no audio files needed, so there's nothing to license */
   var audioCtx = null;
   function getAudioCtx(){
     if(!audioCtx){
@@ -1884,37 +1906,61 @@
     }
     return audioCtx;
   }
-  document.addEventListener("click", function(){
+  function playTone(freq, type, start, dur, peakGain){
     var ctx = getAudioCtx();
-    if(ctx && ctx.state==="suspended") ctx.resume().catch(function(){});
-  });
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0, start);
+    gain.gain.linearRampToValueAtTime(peakGain, start+0.012);
+    gain.gain.exponentialRampToValueAtTime(0.001, start+dur);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(start); osc.stop(start+dur+0.05);
+    return osc;
+  }
   function playBidChime(){
     var ctx = getAudioCtx();
     if(!ctx || ctx.state==="suspended") return;
     var now = ctx.currentTime;
-    [880, 1318.51].forEach(function(freq, i){
-      var osc = ctx.createOscillator();
-      var gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      var start = now + i*0.08;
-      gain.gain.setValueAtTime(0, start);
-      gain.gain.linearRampToValueAtTime(0.22, start+0.01);
-      gain.gain.exponentialRampToValueAtTime(0.001, start+0.5);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(start); osc.stop(start+0.55);
-    });
+    [880, 1318.51].forEach(function(freq, i){ playTone(freq, "sine", now+i*0.08, 0.5, 0.22); });
   }
-  var lastChimePlayerId = null, lastChimeBid = 0;
-  function maybePlayBidChime(cur){
-    if(!cur){ lastChimePlayerId = null; return; }
-    if(cur.playerId !== lastChimePlayerId){
-      lastChimePlayerId = cur.playerId;
-      lastChimeBid = cur.bid||0;
+  function playSoldFanfare(){
+    var ctx = getAudioCtx();
+    if(!ctx || ctx.state==="suspended") return;
+    var now = ctx.currentTime;
+    [523.25, 659.25, 783.99].forEach(function(freq, i){ playTone(freq, "triangle", now+i*0.1, 0.6, 0.28); });
+  }
+  function playNextPlayerChime(){
+    var ctx = getAudioCtx();
+    if(!ctx || ctx.state==="suspended") return;
+    var now = ctx.currentTime;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(587.33, now);
+    osc.frequency.exponentialRampToValueAtTime(880, now+0.15);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.2, now+0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, now+0.35);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now+0.4);
+  }
+
+  var soundTrack = { playerId:undefined, bid:0, resolved:false };
+  function syncAuctionSounds(cur){
+    if(!cur){ soundTrack.playerId = undefined; return; }
+    if(cur.playerId !== soundTrack.playerId){
+      soundTrack.playerId = cur.playerId;
+      soundTrack.bid = cur.bid||0;
+      soundTrack.resolved = cur.resolved;
+      playNextPlayerChime();
       return;
     }
-    if((cur.bid||0) > lastChimeBid) playBidChime();
-    lastChimeBid = cur.bid||0;
+    if((cur.bid||0) > soundTrack.bid) playBidChime();
+    soundTrack.bid = cur.bid||0;
+    if(cur.resolved && !soundTrack.resolved && cur.bidTeamId) playSoldFanfare();
+    soundTrack.resolved = cur.resolved;
   }
 
   /* ---------------- timer loop (admin device only — captains just read the synced value) ---------------- */
