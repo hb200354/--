@@ -456,6 +456,24 @@
     .stage{ padding:12px; }
     .crop-dialog{ width:100%; }
     .crop-viewport{ width:min(220px,70vw); height:calc(min(220px,70vw) * 331 / 220); }
+    .bgm-credit{ display:none; }
+  }
+
+  /* ---------- background music control ---------- */
+  .bgm-bar{
+    position:fixed; right:14px; bottom:14px; z-index:60;
+    display:flex; align-items:center; gap:8px;
+  }
+  .bgm-toggle{
+    width:40px; height:40px; flex:0 0 auto; border-radius:999px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--accent-strong); font-size:17px; cursor:pointer;
+    box-shadow:var(--shadow-card); display:flex; align-items:center; justify-content:center;
+  }
+  .bgm-toggle:hover{ border-color:var(--accent); background:var(--surface-3); }
+  .bgm-toggle.playing{ color:var(--accent-strong); box-shadow:var(--shadow-card), 0 0 0 2px rgba(201,161,58,.3); }
+  .bgm-credit{
+    font-size:9px; color:var(--text-faint); background:var(--bg-2); padding:3px 8px;
+    border-radius:999px; border:1px solid var(--border-soft); white-space:nowrap; opacity:.8;
   }
 </style>
 
@@ -476,6 +494,12 @@
       <button type="button" class="btn btn-accent btn-sm" id="cropApplyBtn">적용</button>
     </div>
   </div>
+</div>
+
+<audio id="bgmAudio" src="audio/bgm.mp3" loop preload="none"></audio>
+<div class="bgm-bar">
+  <button type="button" id="bgmToggle" class="bgm-toggle" title="배경음악 재생/정지">&#128264;</button>
+  <span class="bgm-credit">&#127925; "The Battle" by Marcus Rasseli &middot; CC-BY 3.0 &middot; OpenGameArt.org</span>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -1019,6 +1043,15 @@
     state.order.push(id);
     render(); save();
   };
+  actions.requeueAllPassed = function(){
+    state.passedOrder.forEach(function(id){
+      var player = findPlayer(id);
+      if(player) player.status = "queued";
+      state.order.push(id);
+    });
+    state.passedOrder = [];
+    goNext();
+  };
 
   actions.endAuction = function(){
     if(!confirm("경매를 지금 종료할까요? 남은 선수는 결과에서 미판매로 표시됩니다.")) return;
@@ -1148,6 +1181,9 @@
       else html += finishedHtml();
       app.innerHTML = html;
     }
+
+    if(state.phase==="auction") maybePlayBidChime(state.current);
+    else lastChimePlayerId = null;
 
     if(restore){
       var el = document.getElementById(restore.id);
@@ -1358,12 +1394,18 @@
 
   function stageEmptyHtml(){
     var hasPassed = state.passedOrder.length>0;
+    var actionsHtml = hasPassed
+      ? '<div class="action-row" style="justify-content:center;">'+
+          '<button class="btn btn-accent" data-action="requeueAllPassed">유찰 선수 '+state.passedOrder.length+'명 다시 진행 &rarr;</button>'+
+          '<button class="btn btn-danger" data-action="endAuction">경매 종료하고 결과 보기</button>'+
+        '</div>'
+      : '<button class="btn btn-accent" data-action="endAuction">경매 종료하고 결과 보기</button>';
     return '<div class="stage"><div class="stage-empty">'+
       '<h2 style="font-size:18px;">대기열이 비었습니다</h2>'+
       '<p style="font-size:13px;max-width:320px;">'+(hasPassed
-        ? '유찰 목록에서 선수를 다시 불러오거나, 경매를 종료해 결과를 확인하세요.'
+        ? '유찰된 선수 '+state.passedOrder.length+'명이 남아있습니다. 다시 경매에 부치거나 여기서 종료하세요.'
         : '모든 선수의 경매가 끝났습니다. 경매를 종료해 결과를 확인하세요.')+'</p>'+
-      '<button class="btn btn-accent" data-action="endAuction">경매 종료하고 결과 보기</button>'+
+      actionsHtml+
     '</div></div>';
   }
 
@@ -1804,6 +1846,75 @@
       if(player){ player.photoDataUrl = dataUrl; render(); save(); }
       closeCropModal();
     });
+  }
+
+  /* ---------------- background music + bid chime ---------------- */
+
+  var BGM_PREF_KEY = "naejeon_bgm_on_v1";
+  var bgmAudio = document.getElementById("bgmAudio");
+  var bgmToggle = document.getElementById("bgmToggle");
+
+  function setBgmToggleUI(playing){
+    if(!bgmToggle) return;
+    bgmToggle.innerHTML = playing ? "&#128266;" : "&#128264;";
+    bgmToggle.classList.toggle("playing", playing);
+  }
+  if(bgmToggle && bgmAudio){
+    bgmToggle.addEventListener("click", function(){
+      if(bgmAudio.paused){
+        bgmAudio.volume = 0.35;
+        bgmAudio.play().then(function(){
+          setBgmToggleUI(true);
+          try{ localStorage.setItem(BGM_PREF_KEY,"1"); }catch(e){}
+        }).catch(function(){});
+      }else{
+        bgmAudio.pause();
+        setBgmToggleUI(false);
+        try{ localStorage.setItem(BGM_PREF_KEY,"0"); }catch(e){}
+      }
+    });
+  }
+
+  /* short synthesized "cha-ching" chime played whenever the current bid
+     rises — no audio file needed, so there's nothing to license */
+  var audioCtx = null;
+  function getAudioCtx(){
+    if(!audioCtx){
+      try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+    }
+    return audioCtx;
+  }
+  document.addEventListener("click", function(){
+    var ctx = getAudioCtx();
+    if(ctx && ctx.state==="suspended") ctx.resume().catch(function(){});
+  });
+  function playBidChime(){
+    var ctx = getAudioCtx();
+    if(!ctx || ctx.state==="suspended") return;
+    var now = ctx.currentTime;
+    [880, 1318.51].forEach(function(freq, i){
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      var start = now + i*0.08;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.22, start+0.01);
+      gain.gain.exponentialRampToValueAtTime(0.001, start+0.5);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(start); osc.stop(start+0.55);
+    });
+  }
+  var lastChimePlayerId = null, lastChimeBid = 0;
+  function maybePlayBidChime(cur){
+    if(!cur){ lastChimePlayerId = null; return; }
+    if(cur.playerId !== lastChimePlayerId){
+      lastChimePlayerId = cur.playerId;
+      lastChimeBid = cur.bid||0;
+      return;
+    }
+    if((cur.bid||0) > lastChimeBid) playBidChime();
+    lastChimeBid = cur.bid||0;
   }
 
   /* ---------------- timer loop (admin device only — captains just read the synced value) ---------------- */
