@@ -475,6 +475,11 @@
     font-size:9px; color:var(--text-faint); background:var(--bg-2); padding:3px 8px;
     border-radius:999px; border:1px solid var(--border-soft); white-space:nowrap; opacity:.8;
   }
+  .site-credit{
+    position:fixed; left:14px; bottom:14px; z-index:60;
+    font-size:9px; color:var(--text-faint); background:var(--bg-2); padding:3px 8px;
+    border-radius:999px; border:1px solid var(--border-soft); white-space:nowrap; opacity:.8;
+  }
 </style>
 
 <div id="app"></div>
@@ -497,6 +502,7 @@
 </div>
 
 <audio id="bgmAudio" src="audio/bgm.mp3" loop preload="none"></audio>
+<div class="site-credit">made by 서하엘</div>
 <div class="bgm-bar">
   <button type="button" id="bgmToggle" class="bgm-toggle" title="배경음악 끄기/켜기">&#128266;</button>
   <span class="bgm-credit">&#127925; "The Battle" by Marcus Rasseli &middot; CC-BY 3.0 &middot; OpenGameArt.org</span>
