@@ -152,7 +152,7 @@
   .pick-search{ display:flex; align-items:center; gap:6px; }
   .pick-search-box{ position:relative; flex:1; min-width:0; }
   .pick-dropdown{
-    position:absolute; top:calc(100% + 4px); left:0; right:0; z-index:20;
+    position:fixed; z-index:70;
     background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius-sm);
     max-height:220px; overflow-y:auto; box-shadow:0 8px 24px -8px rgba(0,0,0,.6);
   }
@@ -457,6 +457,7 @@
     .crop-dialog{ width:100%; }
     .crop-viewport{ width:min(220px,70vw); height:calc(min(220px,70vw) * 331 / 220); }
     .bgm-credit{ display:none; }
+    .site-credit{ top:96px; right:12px; }
   }
 
   /* ---------- background music control ---------- */
@@ -476,11 +477,14 @@
     border-radius:999px; border:1px solid var(--border-soft); white-space:nowrap; opacity:.8;
   }
   .site-credit{
-    position:fixed; left:14px; bottom:14px; z-index:60;
+    position:fixed; top:66px; right:14px; z-index:60;
     font-size:12px; font-weight:700; color:var(--accent-strong); background:var(--bg-2); padding:5px 12px;
     border-radius:999px; border:1px solid var(--accent); white-space:nowrap;
     box-shadow:var(--shadow-card);
   }
+  /* the captain (bidder) view has live team-points info right at the top of
+     the phone screen, so keep the credit out of the way in the bottom corner there */
+  #app.captain-app ~ .site-credit{ top:auto; right:auto; bottom:14px; left:14px; }
 </style>
 
 <div id="app"></div>
@@ -773,6 +777,24 @@
       '</button>';
     }).join("");
   }
+
+  function positionPickDropdown(box, dropdown){
+    var rect = box.getBoundingClientRect();
+    dropdown.style.left = rect.left+"px";
+    dropdown.style.top = (rect.bottom+4)+"px";
+    dropdown.style.width = rect.width+"px";
+  }
+
+  function repositionOpenPickDropdowns(){
+    var openDropdowns = app.querySelectorAll(".pick-dropdown:not([hidden])");
+    for(var i=0;i<openDropdowns.length;i++){
+      var dropdown = openDropdowns[i];
+      var box = dropdown.closest(".pick-search-box");
+      if(box) positionPickDropdown(box, dropdown);
+    }
+  }
+  window.addEventListener("scroll", repositionOpenPickDropdowns, true);
+  window.addEventListener("resize", repositionOpenPickDropdowns);
 
   function pickSearchHtml(playerId, slot, value){
     var v = value || "";
@@ -1659,6 +1681,7 @@
       if(results.length){
         dropdown.innerHTML = pickDropdownItemsHtml(results);
         dropdown.hidden = false;
+        positionPickDropdown(el.parentElement, dropdown);
       }else{
         dropdown.innerHTML = "";
         dropdown.hidden = true;
@@ -1675,6 +1698,7 @@
     if(results.length){
       dropdown.innerHTML = pickDropdownItemsHtml(results);
       dropdown.hidden = false;
+      positionPickDropdown(el.parentElement, dropdown);
     }
   });
 
