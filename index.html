@@ -477,8 +477,9 @@
   }
   .site-credit{
     position:fixed; left:14px; bottom:14px; z-index:60;
-    font-size:9px; color:var(--text-faint); background:var(--bg-2); padding:3px 8px;
-    border-radius:999px; border:1px solid var(--border-soft); white-space:nowrap; opacity:.8;
+    font-size:12px; font-weight:700; color:var(--accent-strong); background:var(--bg-2); padding:5px 12px;
+    border-radius:999px; border:1px solid var(--accent); white-space:nowrap;
+    box-shadow:var(--shadow-card);
   }
 </style>
 
@@ -657,7 +658,7 @@
   var DDRAGON_VERSION = "16.13.1";
   var WR_CHAMPS_RAW = [
     ["Garen","가렌"],["Galio","갈리오"],["Gragas","그라가스"],["Graves","그레이브즈"],["Gwen","그웬"],
-    ["Gnar","나르"],["Nami","나미"],["Nasus","나서스"],["Nautilus","노틸러스"],["Nocturne","녹턴"],
+    ["Gnar","나르"],["Nami","나미"],["Nasus","나서스"],["Norra","노라"],["Nautilus","노틸러스"],["Nocturne","녹턴"],
     ["Nunu","누누와 윌럼프"],["Nidalee","니달리"],["Nilah","닐라"],["Darius","다리우스"],["Diana","다이애나"],
     ["Draven","드레이븐"],["Ryze","라이즈"],["Rakan","라칸"],["Rammus","람머스"],["Lux","럭스"],
     ["Rumble","럼블"],["Renekton","레넥톤"],["Leona","레오나"],["Rell","렐"],["Rengar","렝가"],
@@ -704,7 +705,12 @@
     return null;
   }
 
+  /* champions with no PC League ddragon entry (Wild Rift exclusives) */
+  var CHAMP_IMG_OVERRIDES = {
+    "Norra":"https://www.wildriftfire.com/images/champion/icon/norra.png"
+  };
   function championImgUrl(id){
+    if(CHAMP_IMG_OVERRIDES[id]) return CHAMP_IMG_OVERRIDES[id];
     return "https://ddragon.leagueoflegends.com/cdn/"+DDRAGON_VERSION+"/img/champion/"+id+".png";
   }
 
