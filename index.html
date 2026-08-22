@@ -458,6 +458,10 @@
     .crop-viewport{ width:min(220px,70vw); height:calc(min(220px,70vw) * 331 / 220); }
     .bgm-credit{ display:none; }
     .site-credit{ top:96px; right:12px; }
+    /* iOS/Android auto-zoom the whole page on focus when an input's font-size
+       is under 16px, which is what pushes the bid button off-screen while the
+       keyboard is up — bumping to 16px here keeps the layout stable */
+    input[type=text], input[type=number], textarea, select{ font-size:16px; }
   }
 
   /* ---------- background music control ---------- */
@@ -1201,7 +1205,13 @@
     var active = document.activeElement;
     var restore = null;
     if(active && active.id && (active.tagName==="INPUT" || active.tagName==="TEXTAREA")){
-      restore = { id:active.id, value:active.value, selStart:active.selectionStart, selEnd:active.selectionEnd };
+      restore = { id:active.id, value:active.value, selStart:null, selEnd:null };
+      /* input[type=number] (e.g. the captain's manual-bid field) throws on
+         selectionStart/selectionEnd access — without this try/catch that
+         exception aborts render() before app.innerHTML is rebuilt, so the
+         whole screen silently stops updating for anyone typing a bid when a
+         remote sync lands mid-keystroke */
+      try{ restore.selStart = active.selectionStart; restore.selEnd = active.selectionEnd; }catch(e){}
     }
 
     if(IS_CAPTAIN_VIEW){
