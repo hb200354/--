@@ -290,6 +290,7 @@
   .showcase-desc::before{ content:"\201C"; color:var(--accent); margin-right:2px; font-style:normal; }
   .showcase-desc::after{ content:"\201D"; color:var(--accent); margin-left:1px; font-style:normal; }
   .showcase-desc.empty{ visibility:hidden; }
+  .showcase-desc-below{ display:none; }
 
   .player-card{
     background:linear-gradient(180deg,var(--surface),var(--bg-2)); border:1px solid var(--border); border-radius:var(--radius);
@@ -456,12 +457,49 @@
     .header{ padding:0 12px; height:auto; min-height:56px; flex-wrap:wrap; gap:4px; padding-top:8px; padding-bottom:8px; }
     .brand-sub{ display:none; }
     .header-mid{ order:1; flex:1 1 100%; }
-    .setup-shell, .finish-shell{ padding:20px 12px 40px; }
+    .setup-shell, .finish-shell{ padding:20px 12px 76px; }
     .stage{ padding:12px; }
     .crop-dialog{ width:100%; }
     .crop-viewport{ width:min(220px,70vw); height:calc(min(220px,70vw) * 331 / 220); }
     .bgm-credit{ display:none; }
-    .site-credit{ top:96px; right:12px; }
+    /* auction screen on a small phone: on a ~340px-wide card the in-card
+       name and quote scale down to 7-10px, so give them a floor and move the
+       quote under the card; bigger text and tap targets for the rest */
+    .layout{ padding-bottom:64px; }
+    .showcase-kicker{ font-size:12px; }
+    .showcase-portrait-name{ font-size:max(14px,3.8cqw); }
+    .showcase-meta-zone .showcase-desc{ display:none; }
+    .showcase-desc-below{
+      display:block; margin-top:8px; padding:8px 12px;
+      font-family:var(--font-serif-kr); font-weight:600; font-size:14px; line-height:1.45;
+      color:var(--text); background:var(--surface); border:1px solid var(--border-soft);
+      border-left:3px solid var(--accent); border-radius:var(--radius-sm);
+      overflow-wrap:anywhere;
+    }
+    .player-card{ padding:14px 16px; }
+    .bid-now{ flex-wrap:nowrap; gap:12px; }
+    .bid-amount{ font-size:30px; }
+    .bid-team{ font-size:13px; }
+    .timer-box{ gap:8px; flex:0 1 auto; min-width:0; }
+    .timer-bar{ width:clamp(48px,22vw,100px); }
+    .timer-num{ font-size:34px; min-width:48px; }
+    .controls-card{ padding:14px; }
+    .controls-card .action-row{ display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+    .controls-card .action-row .btn{ grid-column:span 2; min-height:44px; padding:8px 4px; font-size:13px; white-space:normal; }
+    .controls-card .action-row .btn-accent, .controls-card .action-row .btn-danger{ grid-column:span 3; font-size:14px; }
+    .result-banner{ flex-wrap:wrap; }
+    .result-banner .btn{ flex:1 1 auto; min-height:44px; }
+    .log-item{ font-size:13px; }
+
+    .panel{ padding:14px 12px; }
+    .team-card{ padding:12px; margin-bottom:10px; }
+    .team-card-name{ font-size:15px; }
+    .team-card-pts{ font-size:14px; }
+    .position-chip{ font-size:11.5px; padding:2px 9px; }
+    .slots{ display:grid; grid-template-columns:repeat(auto-fill,minmax(88px,1fr)); }
+    .slot{ min-width:0; font-size:12px; padding:6px 8px; }
+    .queue-item, .passed-item{ font-size:14px; padding:9px 10px; }
+    .empty-note{ font-size:13px; }
     /* iOS/Android auto-zoom the whole page on focus when an input's font-size
        is under 16px, which is what pushes the bid button off-screen while the
        keyboard is up — bumping to 16px here keeps the layout stable */
@@ -493,6 +531,11 @@
   /* the captain (bidder) view has live team-points info right at the top of
      the phone screen, so keep the credit out of the way in the bottom corner there */
   #app.captain-app ~ .site-credit{ top:auto; right:auto; bottom:14px; left:14px; }
+  /* on a phone the top-right spot sits on the header/stage — park it bottom-left
+     (must come after the base rule above, or its top/right win) */
+  @media (max-width:600px){
+    .site-credit{ top:auto; right:auto; bottom:14px; left:12px; font-size:11px; padding:4px 10px; }
+  }
 
   /* iOS zooms the page on focus for any input under 16px — on touch devices
      keep inputs at 16px at every width, not just narrow portrait */
@@ -516,7 +559,7 @@
       grid-template-columns:minmax(0,1fr) minmax(230px,32%);
       grid-template-rows:minmax(0,3fr) minmax(0,2fr);
       grid-template-areas:"stage teams" "stage queue";
-      flex:0 0 auto; height:calc(100vh - 44px); height:calc(100dvh - 44px);
+      flex:0 0 auto; height:calc(100vh - 44px); height:calc(100dvh - 44px); padding-bottom:0;
       overflow:hidden;
     }
     .layout > .panel{ order:0; padding:10px 12px 12px; border-right:none; border-bottom:none; }
@@ -530,6 +573,9 @@
     /* cap the card so the current bid stays on screen under it */
     .showcase-wrap{ max-width:min(820px, calc((100dvh - 44px - 130px) * 1677 / 938)); }
     .showcase-kicker{ margin-bottom:2px; }
+    /* no vertical room for the quote under the card here — keep it inside */
+    .showcase-desc-below{ display:none; }
+    .showcase-meta-zone .showcase-desc{ display:-webkit-box; }
     .player-card{ padding:10px 16px; }
     .bid-now{ gap:12px; }
     .bid-amount{ font-size:26px; }
@@ -544,7 +590,7 @@
 
     .bgm-bar{ right:10px; bottom:10px; }
     .bgm-credit{ display:none; }
-    .site-credit{ top:auto; right:58px; bottom:18px; font-size:11px; padding:4px 10px; }
+    .site-credit{ top:auto; left:auto; right:58px; bottom:18px; font-size:11px; padding:4px 10px; }
   }
 </style>
 
@@ -1542,6 +1588,7 @@
             '<span class="showcase-desc'+(desc?"":" empty")+'">'+escapeHtml(desc)+'</span>'+
           '</div>'+
         '</div>'+
+        (desc?'<div class="showcase-desc-below">'+escapeHtml(desc)+'</div>':'')+
       '</div>';
 
     var log = cur.history.slice(0,8).map(function(h){
