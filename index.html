@@ -31,6 +31,8 @@
   }
   *,*::before,*::after{ box-sizing:border-box; }
   html,body{ height:100%; }
+  /* iOS Safari inflates text when the phone is rotated to landscape unless told not to */
+  html{ -webkit-text-size-adjust:100%; text-size-adjust:100%; }
   body{
     margin:0;
     background:
@@ -49,7 +51,7 @@
   :focus-visible{ outline:2px solid var(--focus); outline-offset:2px; }
 
   /* ---------- shell ---------- */
-  #app{ min-height:100vh; display:flex; flex-direction:column; }
+  #app{ min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; }
   @media (min-width:900px){
     #app:not(.captain-app){ min-width:1080px; overflow-x:auto; }
   }
@@ -88,6 +90,8 @@
   .btn-danger:hover:not(:disabled){ background:var(--bad-dim); }
   .btn-sm{ padding:5px 10px; font-size:12px; }
   .btn-block{ width:100%; }
+  /* no double-tap-to-zoom delay on phone taps */
+  button, .btn, input, select{ touch-action:manipulation; }
 
   /* ---------- setup ---------- */
   .setup-shell{ flex:1; overflow-y:auto; padding:32px 20px 60px; }
@@ -489,6 +493,59 @@
   /* the captain (bidder) view has live team-points info right at the top of
      the phone screen, so keep the credit out of the way in the bottom corner there */
   #app.captain-app ~ .site-credit{ top:auto; right:auto; bottom:14px; left:14px; }
+
+  /* iOS zooms the page on focus for any input under 16px — on touch devices
+     keep inputs at 16px at every width, not just narrow portrait */
+  @media (pointer:coarse){
+    input[type=text], input[type=number], textarea, select{ font-size:16px; }
+  }
+
+  /* ---------- phone in landscape (iPhone etc.) ---------- */
+  /* ~390px tall and 667-932px wide: too short for the stacked phone layout and
+     too narrow for the 1080px desktop console, so lay the auction out as the
+     stage on the left and team/queue columns stacked on the right, each
+     scrolling on its own inside the viewport */
+  @media (orientation:landscape) and (max-height:540px){
+    #app:not(.captain-app){ min-width:0; overflow-x:visible; }
+    .header{ height:44px; min-height:0; padding:0 14px; flex-wrap:nowrap; }
+    .brand-mark{ font-size:15px; }
+    .brand-sub{ display:none; }
+    .header-mid{ order:0; flex:0 1 auto; }
+
+    .layout{
+      grid-template-columns:minmax(0,1fr) minmax(230px,32%);
+      grid-template-rows:minmax(0,3fr) minmax(0,2fr);
+      grid-template-areas:"stage teams" "stage queue";
+      flex:0 0 auto; height:calc(100vh - 44px); height:calc(100dvh - 44px);
+      overflow:hidden;
+    }
+    .layout > .panel{ order:0; padding:10px 12px 12px; border-right:none; border-bottom:none; }
+    .layout > .panel:nth-child(1){ grid-area:teams; border-left:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .layout > .panel:nth-child(2){ grid-area:stage; }
+    .layout > .panel:nth-child(3){ grid-area:queue; border-left:1px solid var(--border); padding-bottom:64px; }
+    .panel-title{ margin-bottom:8px; padding-bottom:6px; }
+    .team-card{ padding:10px; margin-bottom:8px; }
+
+    .stage{ padding:10px 14px 16px; gap:10px; }
+    /* cap the card so the current bid stays on screen under it */
+    .showcase-wrap{ max-width:min(820px, calc((100dvh - 44px - 130px) * 1677 / 938)); }
+    .showcase-kicker{ margin-bottom:2px; }
+    .player-card{ padding:10px 16px; }
+    .bid-now{ gap:12px; }
+    .bid-amount{ font-size:26px; }
+    .timer-num{ font-size:30px; min-width:48px; }
+    .controls-card{ padding:12px 14px; gap:10px; }
+    .result-banner{ padding:10px 14px; }
+
+    .setup-shell, .finish-shell{ padding:16px 16px 72px; }
+    .crop-overlay{ padding:10px; }
+    .crop-dialog{ padding:12px 16px; gap:8px; }
+    .crop-viewport{ height:min(331px, calc(100dvh - 150px)); width:calc(min(331px, calc(100dvh - 150px)) * 220 / 331); }
+
+    .bgm-bar{ right:10px; bottom:10px; }
+    .bgm-credit{ display:none; }
+    .site-credit{ top:auto; right:58px; bottom:18px; font-size:11px; padding:4px 10px; }
+  }
 </style>
 
 <div id="app"></div>
@@ -1214,6 +1271,12 @@
       try{ restore.selStart = active.selectionStart; restore.selEnd = active.selectionEnd; }catch(e){}
     }
 
+    /* the landscape-phone layout scrolls each column on its own, and the
+       innerHTML rebuild below (every timer tick) would snap them all back to
+       the top — remember each scroller's position and put it back after */
+    var SCROLLERS = ".layout, .panel, .stage, .setup-shell, .finish-shell";
+    var scrollPos = Array.prototype.map.call(app.querySelectorAll(SCROLLERS), function(el){ return el.scrollTop; });
+
     if(IS_CAPTAIN_VIEW){
       app.classList.add("captain-app");
       app.innerHTML = captainAppHtml();
@@ -1224,6 +1287,12 @@
       else if(state.phase==="auction") html += auctionHtml();
       else html += finishedHtml();
       app.innerHTML = html;
+      if(app.dataset.phase===state.phase){
+        Array.prototype.forEach.call(app.querySelectorAll(SCROLLERS), function(el, i){
+          if(scrollPos[i]) el.scrollTop = scrollPos[i];
+        });
+      }
+      app.dataset.phase = state.phase;
     }
 
     if(state.phase==="auction") syncAuctionSounds(state.current);
