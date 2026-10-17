@@ -291,6 +291,12 @@
   .showcase-desc::after{ content:"\201D"; color:var(--accent); margin-left:1px; font-style:normal; }
   .showcase-desc.empty{ visibility:hidden; }
   .showcase-desc-below{ display:none; }
+  /* control buttons sit three to a row on phones; drop the extra word when
+     that row gets too narrow so labels never break mid-word */
+  .controls-card .action-row .btn{ white-space:nowrap; }
+  @media (max-width:360px), (orientation:landscape) and (max-height:540px) and (max-width:720px){
+    .lbl-long{ display:none; }
+  }
 
   .player-card{
     background:linear-gradient(180deg,var(--surface),var(--bg-2)); border:1px solid var(--border); border-radius:var(--radius);
@@ -485,7 +491,7 @@
     .timer-num{ font-size:34px; min-width:48px; }
     .controls-card{ padding:14px; }
     .controls-card .action-row{ display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
-    .controls-card .action-row .btn{ grid-column:span 2; min-height:44px; padding:8px 4px; font-size:13px; white-space:normal; }
+    .controls-card .action-row .btn{ grid-column:span 2; min-height:44px; padding:8px 4px; font-size:13px; }
     .controls-card .action-row .btn-accent, .controls-card .action-row .btn-danger{ grid-column:span 3; font-size:14px; }
     .result-banner{ flex-wrap:wrap; }
     .result-banner .btn{ flex:1 1 auto; min-height:44px; }
@@ -544,10 +550,8 @@
   }
 
   /* ---------- phone in landscape (iPhone etc.) ---------- */
-  /* ~390px tall and 667-932px wide: too short for the stacked phone layout and
-     too narrow for the 1080px desktop console, so lay the auction out as the
-     stage on the left and team/queue columns stacked on the right, each
-     scrolling on its own inside the viewport */
+  /* ~300-430px tall and 568-932px wide: too short for the stacked phone
+     layout and too narrow for the 1080px desktop console */
   @media (orientation:landscape) and (max-height:540px){
     #app:not(.captain-app){ min-width:0; overflow-x:visible; }
     .header{ height:44px; min-height:0; padding:0 14px; flex-wrap:nowrap; }
@@ -555,33 +559,61 @@
     .brand-sub{ display:none; }
     .header-mid{ order:0; flex:0 1 auto; }
 
+    /* the first screen is the current player + bid + host controls side by
+       side, so nothing the host taps needs scrolling; team status and the
+       queue sit below in two columns. The whole area scrolls as one. */
     .layout{
-      grid-template-columns:minmax(0,1fr) minmax(230px,32%);
-      grid-template-rows:minmax(0,3fr) minmax(0,2fr);
-      grid-template-areas:"stage teams" "stage queue";
-      flex:0 0 auto; height:calc(100vh - 44px); height:calc(100dvh - 44px); padding-bottom:0;
-      overflow:hidden;
+      grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+      grid-template-rows:max-content max-content;
+      grid-template-areas:"stage stage" "teams queue";
+      flex:0 0 auto; height:calc(100vh - 44px); height:calc(100dvh - 44px);
+      overflow-y:auto; overflow-x:hidden; padding-bottom:64px;
     }
-    .layout > .panel{ order:0; padding:10px 12px 12px; border-right:none; border-bottom:none; }
-    .layout > .panel:nth-child(1){ grid-area:teams; border-left:1px solid var(--border); border-bottom:1px solid var(--border); }
+    .layout > .panel{ order:0; overflow:visible; padding:12px 14px; border-right:none; border-bottom:none; }
+    .layout > .panel:nth-child(1){ grid-area:teams; border-top:1px solid var(--border); border-right:1px solid var(--border); }
     .layout > .panel:nth-child(2){ grid-area:stage; }
-    .layout > .panel:nth-child(3){ grid-area:queue; border-left:1px solid var(--border); padding-bottom:64px; }
+    .layout > .panel:nth-child(3){ grid-area:queue; border-top:1px solid var(--border); }
     .panel-title{ margin-bottom:8px; padding-bottom:6px; }
-    .team-card{ padding:10px; margin-bottom:8px; }
+    .team-card{ padding:10px 12px; margin-bottom:8px; }
+    .team-card-name{ font-size:15px; }
+    .team-card-pts{ font-size:14px; }
+    .position-chip{ font-size:11.5px; }
+    .slot{ font-size:12px; }
+    .queue-item, .passed-item{ font-size:14px; }
 
-    .stage{ padding:10px 14px 16px; gap:10px; }
-    /* cap the card so the current bid stays on screen under it */
-    .showcase-wrap{ max-width:min(820px, calc((100dvh - 44px - 130px) * 1677 / 938)); }
-    .showcase-kicker{ margin-bottom:2px; }
-    /* no vertical room for the quote under the card here — keep it inside */
-    .showcase-desc-below{ display:none; }
-    .showcase-meta-zone .showcase-desc{ display:-webkit-box; }
-    .player-card{ padding:10px 16px; }
-    .bid-now{ gap:12px; }
-    .bid-amount{ font-size:26px; }
-    .timer-num{ font-size:30px; min-width:48px; }
-    .controls-card{ padding:12px 14px; gap:10px; }
-    .result-banner{ padding:10px 14px; }
+    .stage{
+      display:grid; grid-template-columns:minmax(0,52%) minmax(0,1fr);
+      column-gap:16px; row-gap:10px; align-items:start; align-content:start;
+      padding:10px 14px 12px;
+    }
+    .stage > *{ grid-column:2; }
+    .stage > .showcase-wrap{ grid-column:1; grid-row:1 / span 10; max-width:none; margin:0; }
+    .stage > .stage-empty{ grid-column:1 / -1; padding:20px; }
+    .showcase-kicker{ margin-bottom:2px; font-size:12px; }
+    .showcase-portrait-name{ font-size:max(16px,3.8cqw); }
+    /* the in-card quote would be ~8px here — show it under the card instead */
+    .showcase-meta-zone .showcase-desc{ display:none; }
+    .showcase-desc-below{
+      display:block; margin-top:8px; padding:6px 10px;
+      font-family:var(--font-serif-kr); font-weight:600; font-size:14px; line-height:1.4;
+      color:var(--text); background:var(--surface); border:1px solid var(--border-soft);
+      border-left:3px solid var(--accent); border-radius:var(--radius-sm); overflow-wrap:anywhere;
+    }
+    .player-card{ padding:10px 14px; }
+    .bid-now{ flex-wrap:nowrap; gap:10px; }
+    .bid-amount{ font-size:30px; line-height:1.1; }
+    .bid-team{ font-size:13px; }
+    .timer-box{ gap:8px; min-width:0; }
+    .timer-bar{ width:clamp(40px,8vw,90px); }
+    .timer-num{ font-size:32px; min-width:44px; }
+    .controls-card{ padding:10px; gap:8px; }
+    .controls-card .controls-row-title{ display:none; }
+    .controls-card .action-row{ display:grid; grid-template-columns:repeat(6,1fr); gap:6px; }
+    .controls-card .action-row .btn{ grid-column:span 2; min-height:40px; padding:6px 4px; font-size:13px; }
+    .controls-card .action-row .btn-accent, .controls-card .action-row .btn-danger{ grid-column:span 3; font-size:14px; }
+    .result-banner{ padding:10px 12px; flex-wrap:wrap; gap:8px; }
+    .result-banner .btn{ flex:1 1 auto; min-height:40px; }
+    .log-item{ font-size:13px; }
 
     .setup-shell, .finish-shell{ padding:16px 16px 72px; }
     .crop-overlay{ padding:10px; }
@@ -1604,7 +1636,7 @@
       '<div class="controls-card">'+
         '<div class="controls-row-title">진행 조작 · 입찰은 팀장 휴대폰에서 진행됩니다</div>'+
         '<div class="action-row">'+
-          '<button class="btn" data-action="startTimer" '+(cur.timerRunning?'disabled':'')+'>&#9654; 타이머 시작</button>'+
+          '<button class="btn" data-action="startTimer" '+(cur.timerRunning?'disabled':'')+'>&#9654; <span class="lbl-long">타이머 </span>시작</button>'+
           '<button class="btn" data-action="pauseTimer" '+(cur.timerRunning?'':'disabled')+'>&#10074;&#10074; 일시정지</button>'+
           '<button class="btn" data-action="addTime" data-id="10">+10초</button>'+
           '<button class="btn btn-accent" data-action="sellNow" '+(cur.bidTeamId?'':'disabled')+'>&#128296; 낙찰 확정</button>'+
