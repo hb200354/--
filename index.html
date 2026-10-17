@@ -416,10 +416,12 @@
     padding:16px 16px 40px; display:flex; flex-direction:column; gap:14px;
   }
   .captain-header{
-    display:flex; align-items:baseline; justify-content:space-between;
+    display:flex; align-items:center; justify-content:space-between;
     padding-bottom:10px; border-bottom:1px solid var(--border);
   }
   .captain-team-name{ font-family:var(--font-display); font-size:19px; font-weight:700; color:var(--accent-strong); }
+  .captain-header-right{ display:flex; align-items:center; gap:10px; }
+  .captain-topbar{ display:flex; justify-content:flex-end; }
   .captain-pts{ font-size:14px; color:var(--accent-strong); font-weight:700; }
   .captain-pts .total{ color:var(--text-faint); font-weight:500; }
   .captain-message{
@@ -1735,7 +1737,8 @@
   /* ---------------- captain (mobile bidder) view ---------------- */
 
   function captainMessageHtml(title, body){
-    return '<div class="captain-shell"><div class="captain-message">'+
+    var fs = fullscreenBtnHtml();
+    return '<div class="captain-shell">'+(fs?'<div class="captain-topbar">'+fs+'</div>':'')+'<div class="captain-message">'+
       '<h2>'+escapeHtml(title)+'</h2>'+
       (body?'<p>'+escapeHtml(body)+'</p>':'')+
     '</div></div>';
@@ -1766,7 +1769,10 @@
     var header =
       '<div class="captain-header">'+
         '<span class="captain-team-name">'+escapeHtml(team.name)+'</span>'+
-        '<span class="captain-pts"><span class="num">'+team.remaining+'</span>P <span class="total">/ '+team.total+'P</span></span>'+
+        '<span class="captain-header-right">'+
+          '<span class="captain-pts"><span class="num">'+team.remaining+'</span>P <span class="total">/ '+team.total+'P</span></span>'+
+          fullscreenBtnHtml()+
+        '</span>'+
       '</div>'+
       positionChipsHtml(team)+
       '<div class="slots">'+slotHtml(team)+'</div>';
