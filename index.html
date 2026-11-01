@@ -300,7 +300,24 @@
   .showcase-desc::before{ content:"\201C"; color:var(--accent); margin-right:2px; font-style:normal; }
   .showcase-desc::after{ content:"\201D"; color:var(--accent); margin-left:1px; font-style:normal; }
   .showcase-desc.empty{ visibility:hidden; }
-  .showcase-desc-below{ display:none; }
+  .showcase-info{
+    display:none; margin-top:8px; padding:9px 12px;
+    background:var(--surface); border:1px solid var(--border-soft);
+    border-left:3px solid var(--accent); border-radius:var(--radius-sm);
+  }
+  .si-head{ display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; }
+  .si-name{ font-family:var(--font-serif-kr); font-size:19px; font-weight:700; color:var(--accent-strong); line-height:1.25; }
+  .si-head .badge-pos{ font-size:12.5px; padding:2px 9px; }
+  .si-picks{ font-size:13.5px; color:var(--text-dim); margin-left:auto; }
+  .si-desc{
+    margin-top:5px; font-family:var(--font-serif-kr); font-weight:600; font-size:14.5px; line-height:1.45;
+    color:var(--text); overflow-wrap:anywhere;
+  }
+  .si-desc::before{ content:"\201C"; color:var(--accent); }
+  .si-desc::after{ content:"\201D"; color:var(--accent); }
+  /* the captain view is always phone-width, so it always gets the info line */
+  .captain-shell .showcase-info{ display:block; }
+  .captain-shell .showcase-meta-zone .showcase-desc{ display:none; }
   /* control buttons sit three to a row on phones; drop the extra word when
      that row gets too narrow so labels never break mid-word */
   .controls-card .action-row .btn{ white-space:nowrap; }
@@ -487,13 +504,7 @@
     .showcase-kicker{ font-size:12px; }
     .showcase-portrait-name{ font-size:max(14px,3.8cqw); }
     .showcase-meta-zone .showcase-desc{ display:none; }
-    .showcase-desc-below{
-      display:block; margin-top:8px; padding:8px 12px;
-      font-family:var(--font-serif-kr); font-weight:600; font-size:14px; line-height:1.45;
-      color:var(--text); background:var(--surface); border:1px solid var(--border-soft);
-      border-left:3px solid var(--accent); border-radius:var(--radius-sm);
-      overflow-wrap:anywhere;
-    }
+    .showcase-info{ display:block; }
     .player-card{ padding:14px 16px; }
     .bid-now{ flex-wrap:nowrap; gap:12px; }
     .bid-amount{ font-size:30px; }
@@ -605,12 +616,9 @@
     .showcase-portrait-name{ font-size:max(16px,3.8cqw); }
     /* the in-card quote would be ~8px here — show it under the card instead */
     .showcase-meta-zone .showcase-desc{ display:none; }
-    .showcase-desc-below{
-      display:block; margin-top:8px; padding:6px 10px;
-      font-family:var(--font-serif-kr); font-weight:600; font-size:14px; line-height:1.4;
-      color:var(--text); background:var(--surface); border:1px solid var(--border-soft);
-      border-left:3px solid var(--accent); border-radius:var(--radius-sm); overflow-wrap:anywhere;
-    }
+    .showcase-info{ display:block; padding:7px 10px; }
+    .si-name{ font-size:17px; }
+    .si-desc{ margin-top:3px; font-size:14px; line-height:1.35; }
     .player-card{ padding:10px 14px; }
     .bid-now{ flex-wrap:nowrap; gap:10px; }
     .bid-amount{ font-size:30px; line-height:1.1; }
@@ -916,6 +924,26 @@
     return '<div class="showcase-portrait-box">'+
       '<img class="showcase-portrait-img" src="'+src+'" alt="" loading="lazy" onerror="this.remove();">'+
       '<span class="showcase-portrait-name">'+escapeHtml(n)+'</span>'+
+    '</div>';
+  }
+
+  /* on a phone the template card scales its text down to 7-10px, so the
+     same facts are repeated under it at real sizes (hidden on big screens) */
+  function showcaseInfoHtml(player, picks, desc){
+    if(!player) return "";
+    var champNames = (picks||[]).map(function(t){
+      t = String(t==null?"":t).trim();
+      if(!t) return "";
+      var c = matchChampion(t);
+      return c ? c.name : t;
+    }).filter(Boolean);
+    return '<div class="showcase-info">'+
+      '<div class="si-head">'+
+        '<span class="si-name">'+escapeHtml(player.name||"")+'</span>'+
+        (player.position?'<span class="badge-pos">'+escapeHtml(player.position)+'</span>':'')+
+        (champNames.length?'<span class="si-picks">'+champNames.map(escapeHtml).join(" · ")+'</span>':'')+
+      '</div>'+
+      (desc?'<div class="si-desc">'+escapeHtml(desc)+'</div>':'')+
     '</div>';
   }
 
@@ -1659,7 +1687,7 @@
             '<span class="showcase-desc'+(desc?"":" empty")+'">'+escapeHtml(desc)+'</span>'+
           '</div>'+
         '</div>'+
-        (desc?'<div class="showcase-desc-below">'+escapeHtml(desc)+'</div>':'')+
+        showcaseInfoHtml(player, picks, desc)+
       '</div>';
 
     var log = cur.history.slice(0,8).map(function(h){
@@ -1796,6 +1824,7 @@
             '<span class="showcase-desc'+(desc?"":" empty")+'">'+escapeHtml(desc)+'</span>'+
           '</div>'+
         '</div>'+
+        showcaseInfoHtml(player, picks, desc)+
       '</div>';
 
     var bidNow =
