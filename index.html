@@ -146,6 +146,12 @@
   }
   .row-remove:hover{ background:var(--bad-dim); color:var(--bad); border-color:var(--bad); }
 
+  .sync-warn{
+    padding:12px 14px; border-radius:var(--radius); border:1px solid var(--bad);
+    background:var(--bad-dim); color:var(--text); font-size:13px; line-height:1.55;
+  }
+  .sync-warn strong{ color:var(--bad); }
+  .sync-warn code{ background:var(--bg-2); padding:1px 5px; border-radius:4px; font-size:12px; }
   .waiting-team-row{
     display:flex; align-items:center; justify-content:space-between; gap:10px;
     padding:10px 0; border-bottom:1px solid var(--border-soft);
@@ -972,20 +978,54 @@
       });
     }catch(e){ return String(Math.random()); }
   }
+  /* Firebase reports a rejected read/write only through these callbacks —
+     without them a denied database just looks like "연결 중..." forever on
+     the captain's phone while the admin thinks everything is syncing */
+  var fbError = null;
+  var roomOnServer = false;
+  var syncFailed = false, syncWarnedAt = 0;
+  function warnSyncFailed(){
+    var first = !syncFailed;
+    syncFailed = true;
+    if(IS_CAPTAIN_VIEW) return;
+    if(first) render();
+    if(Date.now() - syncWarnedAt > 30000){
+      syncWarnedAt = Date.now();
+      globalToast("서버 저장이 거부되어 팀장 화면에 반영되지 않습니다 · Firebase 권한 설정을 확인해주세요");
+    }
+  }
   function attachSync(){
     if(!fbEnabled || !roomId || fbListenerAttached) return;
     fbListenerAttached = true;
     roomRef().on("value", function(snap){
       var remote = snap.val();
       fbSyncedOnce = true;
+      /* the admin's copy is the source of truth for the room's shape: if the
+         server has no room (e.g. it was started while writes were being
+         refused) or only a fragment of one, push the full local state back
+         instead of adopting the fragment and wiping the auction */
+      var complete = remote && remote.phase && remote.teams && remote.players;
+      if(!IS_CAPTAIN_VIEW){
+        if(!complete){
+          roomOnServer = false;
+          if(state.phase!=="setup") save();
+          return;
+        }
+        roomOnServer = true;
+      }
       if(remote){
         state = normalizeRemoteState(remote);
-        /* the admin's timer rewrites the whole room every second; when only
-           the countdown moved, patch the numbers instead of rebuilding the
-           page — a rebuild every second cuts off any swipe or scroll */
+        /* the admin's timer writes only the countdown every second; when only
+           that moved, patch the numbers instead of rebuilding the page —
+           a rebuild every second cuts off any swipe or scroll */
         if(renderSig(state)===lastRenderSig){ updateTimerUI(); return; }
         render();
       }
+    }, function(err){
+      fbError = err || true;
+      fbListenerAttached = false;
+      warnSyncFailed();
+      render();
     });
   }
   function captainLink(teamId){
@@ -1221,7 +1261,26 @@
   function save(){
     if(IS_CAPTAIN_VIEW) return;
     try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
-    if(fbEnabled && roomId){ roomRef().set(state).catch(function(){}); }
+    if(fbEnabled && roomId){
+      roomRef().set(state).then(function(){
+        roomOnServer = true;
+        if(syncFailed){ syncFailed = false; render(); }
+      }).catch(function(){ warnSyncFailed(); });
+    }
+  }
+
+  /* the per-second countdown writes only current/timerValue. Rewriting the
+     whole room every tick raced with captains' bid transactions on
+     /current: a set() issued just before a bid landed would put the old
+     state back and silently erase the bid. */
+  function saveTimerTick(){
+    if(IS_CAPTAIN_VIEW || !state.current) return;
+    try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); }catch(e){}
+    if(!fbEnabled || !roomId) return;
+    /* until the full room is known to be on the server, a lone timerValue
+       write would create a fragment of a room — send everything instead */
+    if(!roomOnServer){ save(); return; }
+    roomRef("current/timerValue").set(state.current.timerValue).catch(function(){ warnSyncFailed(); });
   }
 
   function findTeam(id){ return state.teams.filter(function(t){return t.id===id;})[0]; }
@@ -1831,6 +1890,9 @@
       '<div><div class="setup-title">팀장 연결 대기중</div>'+
       '<div class="setup-lede">아래 링크를 각 팀장에게 보내주세요. 팀장이 휴대폰에서 링크를 열면 대기 화면이 뜨고, 경매를 시작하면 자동으로 입찰 화면으로 전환됩니다.</div></div>'+
 
+      (syncFailed || fbError
+        ? '<div class="sync-warn"><strong>팀장 화면과 연결되지 않고 있습니다.</strong> 경매 서버(Firebase)가 저장/읽기를 거부하고 있어요. Firebase 콘솔의 Realtime Database 규칙에서 <code>naejeon_rooms</code> 읽기·쓰기를 허용해야 팀장 링크가 작동합니다.</div>'
+        : '')+
       '<div class="card">'+
         '<div class="card-head"><h2>팀장 링크</h2>'+
           '<button class="btn btn-ghost btn-sm" data-action="copyAllCaptainLinks">전체 복사</button>'+
@@ -2043,6 +2105,8 @@
       return captainMessageHtml("잘못된 링크입니다", "운영자에게 받은 링크를 다시 확인해주세요.");
     }
     if(!fbSyncedOnce){
+      if(!fbEnabled) return captainMessageHtml("서버에 연결할 수 없습니다", "인터넷 연결을 확인하고 새로고침 해주세요.");
+      if(fbError) return captainMessageHtml("서버 접근이 거부되었습니다", "경매 서버(Firebase) 권한 설정 문제입니다. 운영자에게 알려주세요.");
       return captainMessageHtml("연결 중...", "잠시만 기다려주세요.");
     }
     var team = findTeam(CAPTAIN_TEAM_ID);
@@ -2735,7 +2799,7 @@
         if(state.current.bidTeamId) resolveSold(); else resolvePassed();
       }else{
         updateTimerUI();
-        save();
+        saveTimerTick();
       }
     }, 1000);
   }
