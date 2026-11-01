@@ -157,9 +157,9 @@
 
   .player-count{ font-size:12px; color:var(--text-faint); margin:10px 0 6px; }
   .player-table{ display:flex; flex-direction:column; gap:4px; overflow-x:auto; }
-  .player-table .player-row, .player-table .player-row.head{ min-width:846px; }
+  .player-table .player-row, .player-table .player-row.head{ min-width:896px; }
   .player-row{
-    display:grid; grid-template-columns:36px 58px minmax(120px,1fr) 84px 148px 148px 148px minmax(160px,1fr) 30px;
+    display:grid; grid-template-columns:36px 108px minmax(120px,1fr) 84px 148px 148px 148px minmax(160px,1fr) 30px;
     gap:8px; align-items:center;
   }
   .player-row.head{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em; padding:0 0 2px; }
@@ -270,6 +270,7 @@
     position:absolute; left:9.3%; top:13.97%; width:26.9%; height:72.3%;
     border-radius:2px; overflow:hidden;
   }
+  .showcase-portrait-box[data-action]{ cursor:zoom-in; }
   .showcase-portrait-img{
     position:absolute; inset:0; width:100%; height:100%;
     object-fit:cover; object-position:top center; display:block;
@@ -304,7 +305,7 @@
   /* control buttons sit three to a row on phones; drop the extra word when
      that row gets too narrow so labels never break mid-word */
   .controls-card .action-row .btn{ white-space:nowrap; }
-  @media (max-width:360px), (orientation:landscape) and (max-height:540px) and (max-width:720px){
+  @media (max-width:360px), (orientation:landscape) and (max-height:540px){
     .lbl-long{ display:none; }
   }
 
@@ -443,49 +444,89 @@
   .photo-pick-btn img{ width:100%; height:100%; object-fit:cover; display:block; }
   .photo-pick-placeholder{ color:var(--text-faint); font-size:16px; line-height:1; }
   .profile-pick-btn{
-    height:32px; padding:0 4px; border-radius:6px; border:1px dashed var(--border);
+    flex:1 1 0; min-width:0; height:32px; padding:0 2px; border-radius:6px; border:1px dashed var(--border);
     background:var(--surface-2); color:var(--text-dim); font-size:11.5px; font-weight:600;
     cursor:pointer; white-space:nowrap;
   }
   .profile-pick-btn:hover{ border-color:var(--accent); }
   .profile-pick-btn.has{ border-style:solid; border-color:var(--accent); color:var(--accent-strong); background:var(--accent-dim); }
 
-  /* ---------- profile screenshot popup ---------- */
-  .showcase-kicker{ align-items:center; gap:8px; }
+  /* ---------- profile / stats screenshot viewer ---------- */
+  .shot-cell{ display:flex; gap:4px; }
   .showcase-profile-btn{
-    margin-right:auto; display:inline-flex; align-items:center; gap:4px; padding:4px 11px;
+    margin-left:auto; flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding:4px 11px;
     border-radius:999px; border:1px solid var(--accent); background:var(--surface-2);
     color:var(--accent-strong); font-family:inherit; font-size:12.5px; font-weight:700;
-    letter-spacing:0; text-transform:none; cursor:pointer;
+    letter-spacing:0; text-transform:none; white-space:nowrap; cursor:pointer;
   }
   .showcase-profile-btn:hover{ background:var(--accent-dim); }
-  .profile-overlay{
-    position:fixed; inset:0; z-index:110; background:rgba(5,3,1,.9);
-    display:flex; align-items:center; justify-content:center; padding:12px;
+  .shot-viewer{
+    position:fixed; inset:0; z-index:110; background:#060302;
+    display:flex; flex-direction:column;
   }
-  .profile-overlay[hidden]{ display:none; }
-  .profile-dialog{ display:flex; flex-direction:column; gap:8px; max-width:100%; max-height:100%; min-width:min(320px,100%); }
-  .profile-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
-  .profile-title{ font-family:var(--font-serif-kr); font-weight:700; font-size:16px; color:var(--accent-strong); }
-  .profile-close{
-    width:40px; height:40px; flex:0 0 auto; border-radius:999px; border:1px solid var(--border);
-    background:var(--surface-2); color:var(--text); font-size:22px; line-height:1; cursor:pointer;
+  .shot-viewer[hidden]{ display:none; }
+  .shot-top{
+    flex:0 0 auto; display:flex; align-items:center; gap:10px; padding:6px 8px 6px 14px; min-height:52px;
+    background:var(--bg-2); border-bottom:1px solid var(--border-soft);
   }
-  .profile-body{ display:flex; justify-content:center; min-height:0; }
-  .profile-img{
-    display:block; width:auto; height:auto; object-fit:contain;
-    max-width:calc(100vw - 16px); max-height:calc(100vh - 66px); max-height:calc(100dvh - 66px);
-    border-radius:6px; border:1px solid var(--border);
+  .shot-title{
+    flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    font-family:var(--font-serif-kr); font-weight:700; font-size:15px; color:var(--accent-strong);
   }
-  .profile-loading{ color:var(--text-dim); padding:40px 20px; text-align:center; }
-  .profile-actions{ display:flex; justify-content:flex-end; gap:8px; }
-  .profile-actions[hidden]{ display:none; }
-  /* leave room for the change/delete row when it's shown (setup only) */
-  .profile-dialog:has(.profile-actions:not([hidden])) .profile-img{ max-height:calc(100dvh - 112px); }
+  .shot-tabs{ display:flex; gap:4px; margin:0 auto; }
+  .shot-tab{
+    appearance:none; padding:6px 14px; border-radius:var(--radius-sm);
+    border:1px solid var(--border-soft); background:transparent; color:var(--text-dim);
+    font-family:inherit; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .shot-tab.active{ background:var(--accent-dim); border-color:var(--accent); color:var(--accent-strong); }
+  .shot-close{
+    flex:0 0 auto; margin-left:auto; width:40px; height:40px; border-radius:999px;
+    border:1px solid var(--border); background:var(--surface-2); color:var(--text);
+    font-size:22px; line-height:1; cursor:pointer;
+  }
+  .shot-tabs + .shot-close{ margin-left:0; }
+  .shot-track{
+    flex:1 1 auto; min-height:0; display:flex;
+    overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
+    overscroll-behavior:contain; scrollbar-width:none;
+  }
+  .shot-track::-webkit-scrollbar{ display:none; }
+  .shot-slide{
+    flex:0 0 100%; width:100%; height:100%; scroll-snap-align:center; scroll-snap-stop:always;
+    display:flex; align-items:center; justify-content:center; padding:10px 10px 6px;
+  }
+  .shot-slide img{
+    display:block; max-width:100%; max-height:100%; object-fit:contain; border-radius:6px;
+    box-shadow:0 0 0 1px rgba(201,161,58,.25), 0 12px 40px -12px rgba(0,0,0,.9);
+  }
+  .shot-foot{ flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:6px; padding:4px 12px 12px; }
+  .shot-dots{ display:flex; gap:7px; }
+  .shot-dot{ width:7px; height:7px; border-radius:999px; background:var(--border); transition:background-color .15s, transform .15s; }
+  .shot-dot.active{ background:var(--accent-strong); transform:scale(1.25); }
+  .shot-hint{ display:none; font-size:12px; color:var(--text-faint); }
+  /* a landscape screenshot is small on an upright phone — say how to see it bigger */
+  @media (orientation:portrait) and (pointer:coarse){ .shot-hint{ display:block; } }
+  .shot-loading{ color:var(--text-dim); font-size:14px; text-align:center; padding:20px; }
+  .shot-nav{
+    position:absolute; top:50%; transform:translateY(-50%); z-index:2;
+    width:42px; height:60px; border-radius:10px; border:1px solid var(--border);
+    background:rgba(26,18,10,.75); color:var(--accent-strong); font-size:28px; line-height:1; cursor:pointer;
+  }
+  .shot-nav.prev{ left:10px; }
+  .shot-nav.next{ right:10px; }
+  .shot-nav[hidden]{ display:none; }
+  .shot-nav:disabled{ opacity:.25; cursor:default; }
+  /* on touch screens swiping and the tabs do the job; arrows would cover the image */
+  @media (pointer:coarse){ .shot-nav{ display:none; } }
+  .shot-actions{ flex:0 0 auto; display:flex; justify-content:center; gap:8px; padding:0 0 14px; }
+  .shot-actions[hidden]{ display:none; }
   @media (orientation:landscape) and (max-height:540px){
-    .profile-overlay{ padding:6px 8px; }
-    .profile-dialog{ gap:4px; }
-    .profile-close{ width:34px; height:34px; font-size:20px; }
+    .shot-top{ min-height:40px; padding:4px 6px 2px 12px; }
+    .shot-tab{ padding:4px 12px; font-size:12px; }
+    .shot-close{ width:34px; height:34px; font-size:20px; }
+    .shot-slide{ padding:6px 8px 2px; }
+    .shot-foot{ padding:2px 12px 6px; }
   }
 
   .crop-overlay{
@@ -721,23 +762,62 @@
   @media (orientation:landscape) and (max-height:540px) and (max-width:660px){
     #app.phase-auction .brand{ display:none; }
   }
+  /* landscape phones (iPhone landscape is only ~320px tall): one size step
+     down so text and controls stop crowding the card */
+  @media (orientation:landscape) and (max-height:540px){
+    #app.phase-auction .header{ height:40px; }
+    .m-nav{ height:32px; }
+    .m-tab{ font-size:12px; padding:2px 9px; }
+    .m-live{ font-size:10px; }
+    .m-arrow{ width:30px; font-size:19px; }
+    .header-right .btn-sm{ font-size:11.5px; padding:4px 9px; }
+    .showcase-kicker{ font-size:10.5px; }
+    .showcase-profile-btn{ font-size:11px; padding:3px 9px; }
+    .player-card{ padding:8px 12px; }
+    .bid-amount-label{ font-size:10px; }
+    .bid-amount{ font-size:24px; }
+    .bid-team{ font-size:12px; }
+    .timer-num{ font-size:26px; min-width:36px; }
+    .controls-card{ padding:8px; gap:6px; }
+    .controls-card .action-row{ gap:5px; }
+    .controls-card .action-row .btn{ min-height:34px; padding:4px 2px; font-size:12px; }
+    .controls-card .action-row .btn-accent, .controls-card .action-row .btn-danger{ font-size:12.5px; }
+    .result-banner{ padding:8px 10px; }
+    .result-banner strong{ font-size:14px; }
+    .result-banner .btn{ min-height:34px; font-size:13px; }
+    .controls-row-title{ font-size:10px; margin-bottom:4px; }
+    .log-item, .empty-note{ font-size:12px; }
+    .panel-title{ font-size:10px; }
+    .team-card-name{ font-size:14px; }
+    .team-card-pts{ font-size:13px; }
+    .position-chip{ font-size:10.5px; }
+    .slot{ font-size:11px; padding:4px 6px; }
+    .queue-item, .passed-item{ font-size:13px; padding:7px 9px; }
+    .bgm-toggle{ width:34px; height:34px; font-size:15px; }
+    .site-credit{ right:52px; bottom:14px; font-size:10px; padding:3px 8px; }
+  }
 </style>
 
 <div id="app"></div>
 <div id="globalToast" class="global-toast"></div>
 <input type="file" id="photoFileInput" accept="image/*" hidden>
-<input type="file" id="profileFileInput" accept="image/*" hidden>
-<div id="profileOverlay" class="profile-overlay" hidden>
-  <div class="profile-dialog" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
-    <div class="profile-head">
-      <span class="profile-title" id="profileTitle"></span>
-      <button type="button" class="profile-close" id="profileCloseBtn" aria-label="닫기">&times;</button>
-    </div>
-    <div class="profile-body" id="profileBody"></div>
-    <div class="profile-actions" id="profileActions" hidden>
-      <button type="button" class="btn btn-sm" id="profileChangeBtn">사진 변경</button>
-      <button type="button" class="btn btn-sm btn-danger" id="profileDeleteBtn">삭제</button>
-    </div>
+<input type="file" id="shotFileInput" accept="image/*" hidden>
+<div id="shotViewer" class="shot-viewer" role="dialog" aria-modal="true" aria-labelledby="shotTitle" hidden>
+  <div class="shot-top">
+    <span class="shot-title" id="shotTitle"></span>
+    <div class="shot-tabs" id="shotTabs"></div>
+    <button type="button" class="shot-close" id="shotCloseBtn" aria-label="닫기">&times;</button>
+  </div>
+  <div class="shot-track" id="shotTrack"></div>
+  <div class="shot-foot">
+    <div class="shot-dots" id="shotDots" aria-hidden="true"></div>
+    <div class="shot-hint">화면을 가로로 돌리면 더 크게 볼 수 있어요</div>
+  </div>
+  <button type="button" class="shot-nav prev" id="shotPrev" aria-label="이전 사진">&#8249;</button>
+  <button type="button" class="shot-nav next" id="shotNext" aria-label="다음 사진">&#8250;</button>
+  <div class="shot-actions" id="shotActions" hidden>
+    <button type="button" class="btn btn-sm" id="shotChangeBtn">이 사진 변경</button>
+    <button type="button" class="btn btn-sm btn-danger" id="shotDeleteBtn">이 사진 삭제</button>
   </div>
 </div>
 <div id="cropOverlay" class="crop-overlay" hidden>
@@ -1044,18 +1124,19 @@
       var c = t ? matchChampion(t) : null;
       if(c && !CHAMP_IMG_OVERRIDES[c.id]) chain.push(championLoadingArtUrl(c.id));
     });
-    return '<div class="showcase-portrait-box">'+
+    return '<div class="showcase-portrait-box" data-action="zoomPortrait" data-id="'+player.id+'" role="button" aria-label="'+escapeHtml(n)+' 사진 크게 보기">'+
       '<img class="showcase-portrait-img" src="'+chain[0]+'" data-fallback="'+escapeHtml(chain.slice(1).join("|"))+'" alt="" loading="lazy" onerror="naejeonPortraitFallback(this)">'+
       '<span class="showcase-portrait-name">'+escapeHtml(n)+'</span>'+
     '</div>';
   }
 
-  /* opens the player's game-profile screenshot (shown only when one was uploaded) */
+  /* opens the profile/stats screenshot viewer (shown only when one was uploaded) */
   function showcaseProfileBtnHtml(player){
-    if(!player || !player.profileAt) return "";
-    return '<button type="button" class="showcase-profile-btn" data-action="openProfile" data-id="'+player.id+'">'+
+    var kinds = player ? shotKindsOf(player) : [];
+    if(!kinds.length) return "";
+    return '<button type="button" class="showcase-profile-btn" data-action="openShots" data-id="'+player.id+'">'+
       '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-6 6"/></svg>'+
-      '프로필</button>';
+      kinds.map(function(k){ return k.label; }).join(" · ")+'</button>';
   }
 
   /* fills one of the three MOST PICK squares in the showcase template */
@@ -1601,21 +1682,22 @@
       else if(state.phase==="auction") html += auctionHtml();
       else html += finishedHtml();
       app.innerHTML = html;
-      if(app.dataset.phase===state.phase){
+      var renderKey = state.phase + ":" + (state.current ? state.current.playerId : "");
+      if(app.dataset.renderKey===renderKey){
         Array.prototype.forEach.call(app.querySelectorAll(SCROLLERS), function(el, i){
           if(scrollPos[i]) el.scrollTop = scrollPos[i];
         });
       }
-      app.dataset.phase = state.phase;
+      app.dataset.renderKey = renderKey;
       app.classList.toggle("phase-auction", state.phase==="auction");
       alignPager(false);
     }
 
-    if(profileOpenFor){
-      var openP = findPlayer(profileOpenFor);
-      if(!openP || !openP.profileAt ||
-         (state.phase==="auction" && (!state.current || state.current.playerId!==profileOpenFor))){
-        closeProfile();
+    if(viewerFor){
+      var openP = findPlayer(viewerFor);
+      if(!openP || (viewerKind==="shots" && !shotKindsOf(openP).length) ||
+         (state.phase==="auction" && (!state.current || state.current.playerId!==viewerFor))){
+        closeViewer();
       }
     }
 
@@ -1673,9 +1755,11 @@
       var photoThumb = p.photoDataUrl ? '<img src="'+p.photoDataUrl+'" alt="">' : '<span class="photo-pick-placeholder">&#43;</span>';
       return '<div class="player-row" data-id="'+p.id+'">'+
         '<button type="button" class="photo-pick-btn" title="사진 업로드/변경" data-action="pickPlayerPhoto" data-id="'+p.id+'">'+photoThumb+'</button>'+
-        (p.profileAt
-          ? '<button type="button" class="profile-pick-btn has" title="프로필 사진 보기/변경" data-action="openProfile" data-id="'+p.id+'">보기</button>'
-          : '<button type="button" class="profile-pick-btn" title="프로필 스크린샷 업로드" data-action="pickProfileShot" data-id="'+p.id+'">+ 추가</button>')+
+        '<div class="shot-cell">'+SHOT_KINDS.map(function(k){
+          return p[k.at]
+            ? '<button type="button" class="profile-pick-btn has" title="'+k.label+' 사진 보기/변경" data-action="openShot" data-id="'+p.id+':'+k.kind+'">&#10003; '+k.label+'</button>'
+            : '<button type="button" class="profile-pick-btn" title="'+k.label+' 스크린샷 업로드" data-action="pickShot" data-id="'+p.id+':'+k.kind+'">+ '+k.label+'</button>';
+        }).join("")+'</div>'+
         '<input type="text" value="'+escapeHtml(p.name)+'" placeholder="이름" data-scope="player" data-id="'+p.id+'" data-field="name">'+
         '<input type="text" value="'+escapeHtml(p.position||"")+'" placeholder="포지션" data-scope="player" data-id="'+p.id+'" data-field="position">'+
         pickSearchHtml(p.id, 0, picks[0])+
@@ -1860,13 +1944,14 @@
 
     var showcaseHtml =
       '<div class="showcase-wrap">'+
-        '<div class="showcase-kicker">'+showcaseProfileBtnHtml(player)+'<span class="num">'+(soldOrPassed+1)+' / '+totalCount+'</span></div>'+
+        '<div class="showcase-kicker"><span class="num">'+(soldOrPassed+1)+' / '+totalCount+'</span></div>'+
         '<div class="showcase-card">'+
           showcasePortraitHtml(player)+
           showcasePickHtml(picks[0],"p1")+showcasePickHtml(picks[1],"p2")+showcasePickHtml(picks[2],"p3")+
           '<div class="showcase-meta-zone">'+
             (player&&player.position?'<span class="badge-pos">'+escapeHtml(player.position)+'</span>':'')+
             '<span class="showcase-desc'+(desc?"":" empty")+'">'+escapeHtml(desc)+'</span>'+
+            showcaseProfileBtnHtml(player)+
           '</div>'+
         '</div>'+
       '</div>';
@@ -1997,13 +2082,13 @@
     var desc = player && player.desc ? player.desc.trim() : "";
     var showcaseHtml =
       '<div class="showcase-wrap">'+
-        (player && player.profileAt ? '<div class="showcase-kicker">'+showcaseProfileBtnHtml(player)+'</div>' : '')+
         '<div class="showcase-card">'+
           showcasePortraitHtml(player)+
           showcasePickHtml(picks[0],"p1")+showcasePickHtml(picks[1],"p2")+showcasePickHtml(picks[2],"p3")+
           '<div class="showcase-meta-zone">'+
             (player&&player.position?'<span class="badge-pos">'+escapeHtml(player.position)+'</span>':'')+
             '<span class="showcase-desc'+(desc?"":" empty")+'">'+escapeHtml(desc)+'</span>'+
+            showcaseProfileBtnHtml(player)+
           '</div>'+
         '</div>'+
       '</div>';
@@ -2310,55 +2395,69 @@
     });
   }
 
-  /* ---------------- profile screenshot (separate from the card portrait) ----------------
-     game-profile screenshots are big and the room state is rewritten every
-     timer tick, so they live at their own path, written once on upload and
-     fetched only when someone opens the popup. Kept out of localStorage too —
+  /* ---------------- profile / stats screenshots (separate from the card portrait) ----------------
+     game screenshots are big and the room state is rewritten every timer
+     tick, so each one lives at its own path, written once on upload and
+     fetched only when someone opens the viewer. Kept out of localStorage too —
      a few of them would fill it and silently stop the auction state saving. */
-  var PROFILE_MAX_SIDE = 1600;
-  var PROFILE_MAX_BYTES = 20*1024*1024;
-  var profileCache = {};
-  var profileOpenFor = null;
-  var pendingProfilePlayerId = null;
-  var profileOverlay = document.getElementById("profileOverlay");
-  var profileBody = document.getElementById("profileBody");
-  var profileTitle = document.getElementById("profileTitle");
-  var profileActions = document.getElementById("profileActions");
-  var profileFileInput = document.getElementById("profileFileInput");
+  var SHOT_KINDS = [
+    { kind:"profile", label:"프로필", at:"profileAt", suffix:"" },
+    { kind:"stats",   label:"통계",   at:"statsAt",   suffix:"_stats" }
+  ];
+  var SHOT_MAX_SIDE = 1600;
+  var SHOT_MAX_BYTES = 20*1024*1024;
+  var shotCache = {};
+  var pendingShot = null;
+  var viewerFor = null, viewerKind = "", viewerSlides = [], viewerIndex = 0;
+  var shotViewer = document.getElementById("shotViewer");
+  var shotTrack = document.getElementById("shotTrack");
+  var shotTabs = document.getElementById("shotTabs");
+  var shotDots = document.getElementById("shotDots");
+  var shotTitle = document.getElementById("shotTitle");
+  var shotActions = document.getElementById("shotActions");
+  var shotPrev = document.getElementById("shotPrev");
+  var shotNext = document.getElementById("shotNext");
+  var shotFileInput = document.getElementById("shotFileInput");
 
-  function profileRef(key, playerId){ return fbDb.ref(ROOM_PATH_PREFIX + "prof_" + key + "/" + playerId); }
-  function profileCacheKey(key, player){ return key + "/" + player.id + "/" + (player.profileAt||0); }
-  function loadProfileShot(player, cb){
+  function shotKind(kind){ return SHOT_KINDS.filter(function(k){ return k.kind===kind; })[0]; }
+  function shotKindsOf(player){ return SHOT_KINDS.filter(function(k){ return !!player[k.at]; }); }
+  function parseShotId(id){
+    var i = String(id||"").lastIndexOf(":");
+    return { pid:String(id).slice(0,i), kind:String(id).slice(i+1) };
+  }
+  function shotRef(key, playerId, k){ return fbDb.ref(ROOM_PATH_PREFIX + "prof_" + key + "/" + playerId + k.suffix); }
+  function shotCacheKey(key, player, k){ return key + "/" + player.id + k.suffix + "/" + (player[k.at]||0); }
+  function loadShot(player, k, cb){
     var key = state.profileKey || ADMIN_ID;
-    var ck = profileCacheKey(key, player);
-    if(profileCache[ck]) return cb(profileCache[ck]);
+    var ck = shotCacheKey(key, player, k);
+    if(shotCache[ck]) return cb(shotCache[ck]);
     if(!fbEnabled || !key) return cb(null);
-    profileRef(key, player.id).once("value").then(function(snap){
+    shotRef(key, player.id, k).once("value").then(function(snap){
       var v = snap.val();
-      if(typeof v==="string" && v.indexOf("data:image/")===0){ profileCache[ck] = v; cb(v); }
+      if(typeof v==="string" && v.indexOf("data:image/")===0){ shotCache[ck] = v; cb(v); }
       else cb(null);
     }).catch(function(){ cb(null); });
   }
-  function saveProfileShot(player, dataUrl){
+  function saveShot(player, k, dataUrl){
     var key = ADMIN_ID;
     state.profileKey = key;
-    player.profileAt = Date.now();
-    profileCache[profileCacheKey(key, player)] = dataUrl;
+    player[k.at] = Date.now();
+    shotCache[shotCacheKey(key, player, k)] = dataUrl;
     if(fbEnabled){
-      profileRef(key, player.id).set(dataUrl).catch(function(){ globalToast("프로필 사진 업로드에 실패했습니다"); });
+      shotRef(key, player.id, k).set(dataUrl).catch(function(){ globalToast(k.label+" 사진 업로드에 실패했습니다"); });
     }
   }
-  function deleteProfileShot(player){
+  function deleteShot(player, k){
     var key = state.profileKey || ADMIN_ID;
-    if(fbEnabled) profileRef(key, player.id).remove().catch(function(){});
-    delete player.profileAt;
+    if(fbEnabled) shotRef(key, player.id, k).remove().catch(function(){});
+    delete player[k.at];
   }
   function downscaleImage(file, cb){
     var reader = new FileReader();
     reader.onload = function(){
       var img = new Image();
       img.onload = function(){
-        var scale = Math.min(1, PROFILE_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+        var scale = Math.min(1, SHOT_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
         var w = Math.round(img.naturalWidth*scale), h = Math.round(img.naturalHeight*scale);
         var c = document.createElement("canvas");
         c.width = w; c.height = h;
@@ -2371,69 +2470,142 @@
     reader.readAsDataURL(file);
   }
 
-  actions.pickProfileShot = function(playerId){
-    pendingProfilePlayerId = playerId;
-    if(profileFileInput) profileFileInput.click();
+  actions.pickShot = function(id){
+    pendingShot = parseShotId(id);
+    if(shotFileInput) shotFileInput.click();
   };
-  if(profileFileInput){
-    profileFileInput.addEventListener("change", function(){
-      var file = profileFileInput.files && profileFileInput.files[0];
-      profileFileInput.value = "";
-      if(!file || !pendingProfilePlayerId) return;
+  if(shotFileInput){
+    shotFileInput.addEventListener("change", function(){
+      var file = shotFileInput.files && shotFileInput.files[0];
+      shotFileInput.value = "";
+      var pend = pendingShot;
+      if(!file || !pend) return;
       if(!/^image\//.test(file.type)){ globalToast("이미지 파일만 업로드할 수 있습니다"); return; }
-      if(file.size > PROFILE_MAX_BYTES){ globalToast("사진 용량은 20MB 이하로 올려주세요"); return; }
-      var pid = pendingProfilePlayerId;
+      if(file.size > SHOT_MAX_BYTES){ globalToast("사진 용량은 20MB 이하로 올려주세요"); return; }
       downscaleImage(file, function(dataUrl){
-        var player = findPlayer(pid);
-        if(!player) return;
-        saveProfileShot(player, dataUrl);
+        var player = findPlayer(pend.pid), k = shotKind(pend.kind);
+        if(!player || !k) return;
+        saveShot(player, k, dataUrl);
         render(); save();
-        globalToast((player.name||"선수")+" 프로필 사진이 등록되었습니다");
+        globalToast((player.name||"선수")+" "+k.label+" 사진이 등록되었습니다");
       });
     });
   }
 
-  function closeProfile(){
-    profileOpenFor = null;
-    if(profileOverlay) profileOverlay.hidden = true;
-    if(profileBody) profileBody.innerHTML = "";
+  /* ---- fullscreen viewer: one slide per picture, swipe or tabs to switch ---- */
+  function closeViewer(){
+    viewerFor = null; viewerKind = ""; viewerSlides = []; viewerIndex = 0;
+    if(shotViewer) shotViewer.hidden = true;
+    if(shotTrack) shotTrack.innerHTML = "";
+    if(shotTabs) shotTabs.innerHTML = "";
+    if(shotDots) shotDots.innerHTML = "";
   }
-  actions.openProfile = function(playerId){
+  function syncViewerUI(){
+    Array.prototype.forEach.call(shotTabs.children, function(b, i){ b.classList.toggle("active", i===viewerIndex); });
+    Array.prototype.forEach.call(shotDots.children, function(d, i){ d.classList.toggle("active", i===viewerIndex); });
+    var many = viewerSlides.length > 1;
+    shotPrev.hidden = shotNext.hidden = !many;
+    shotPrev.disabled = viewerIndex<=0;
+    shotNext.disabled = viewerIndex>=viewerSlides.length-1;
+  }
+  function goViewer(i, smooth){
+    viewerIndex = Math.max(0, Math.min(viewerSlides.length-1, i));
+    syncViewerUI();
+    var left = viewerIndex * shotTrack.clientWidth;
+    if(smooth && shotTrack.scrollTo) shotTrack.scrollTo({ left:left, behavior:"smooth" });
+    else shotTrack.scrollLeft = left;
+  }
+  function fillSlide(slideEl, url, alt){
+    slideEl.innerHTML = "";
+    if(url){
+      var img = document.createElement("img");
+      img.alt = alt; img.src = url;
+      slideEl.appendChild(img);
+    }else{
+      slideEl.innerHTML = '<div class="shot-loading">사진을 불러오지 못했습니다</div>';
+    }
+  }
+  /* slides: [{ label, kind?, url? }] — shot slides without a url load lazily */
+  function openViewer(player, kind, slides, startIndex){
+    if(!shotViewer || !slides.length) return;
+    viewerFor = player.id; viewerKind = kind; viewerSlides = slides;
+    shotTitle.textContent = player.name || "";
+    shotTabs.innerHTML = slides.length > 1 ? slides.map(function(sl, i){
+      return '<button type="button" class="shot-tab" data-index="'+i+'">'+escapeHtml(sl.label)+'</button>';
+    }).join("") : "";
+    shotDots.innerHTML = slides.length > 1 ? slides.map(function(){ return '<span class="shot-dot"></span>'; }).join("") : "";
+    shotTrack.innerHTML = "";
+    slides.forEach(function(sl){
+      var el = document.createElement("div");
+      el.className = "shot-slide";
+      shotTrack.appendChild(el);
+      var alt = (player.name||"") + " " + sl.label;
+      if(sl.url){ fillSlide(el, sl.url, alt); return; }
+      el.innerHTML = '<div class="shot-loading">불러오는 중...</div>';
+      loadShot(player, shotKind(sl.kind), function(url){
+        if(viewerFor!==player.id || !el.isConnected) return;
+        fillSlide(el, url, alt);
+      });
+    });
+    shotActions.hidden = !(kind==="shots" && !IS_CAPTAIN_VIEW && state.phase==="setup");
+    shotViewer.hidden = false;
+    goViewer(startIndex||0, false);
+  }
+  function openShotsFor(playerId, startKind){
     var player = findPlayer(playerId);
-    if(!player || !player.profileAt || !profileOverlay) return;
-    profileOpenFor = playerId;
-    profileTitle.textContent = (player.name||"") + " 프로필";
-    profileBody.innerHTML = '<div class="profile-loading">불러오는 중...</div>';
-    profileActions.hidden = !(!IS_CAPTAIN_VIEW && state.phase==="setup");
-    profileOverlay.hidden = false;
-    loadProfileShot(player, function(url){
-      if(profileOpenFor!==playerId) return;
-      profileBody.innerHTML = "";
-      if(url){
-        var img = document.createElement("img");
-        img.className = "profile-img";
-        img.alt = (player.name||"") + " 프로필";
-        img.src = url;
-        profileBody.appendChild(img);
-      }else{
-        profileBody.innerHTML = '<div class="profile-loading">사진을 불러오지 못했습니다</div>';
-      }
+    if(!player) return;
+    var kinds = shotKindsOf(player);
+    if(!kinds.length) return;
+    var start = Math.max(0, kinds.map(function(k){ return k.kind; }).indexOf(startKind));
+    openViewer(player, "shots", kinds.map(function(k){ return { label:k.label, kind:k.kind }; }), start);
+  }
+  actions.openShots = function(playerId){ openShotsFor(playerId); };
+  actions.openShot = function(id){ var p = parseShotId(id); openShotsFor(p.pid, p.kind); };
+  actions.zoomPortrait = function(playerId){
+    var player = findPlayer(playerId);
+    if(!player) return;
+    var src = "";
+    Array.prototype.some.call(app.querySelectorAll(".showcase-portrait-box"), function(box){
+      if(box.getAttribute("data-id")!==playerId) return false;
+      var im = box.querySelector("img");
+      src = im ? (im.currentSrc || im.src) : "";
+      return true;
     });
+    if(src) openViewer(player, "portrait", [{ label:"사진", url:src }], 0);
   };
-  if(profileOverlay){
-    profileOverlay.addEventListener("click", function(e){ if(e.target===profileOverlay) closeProfile(); });
-    document.getElementById("profileCloseBtn").addEventListener("click", closeProfile);
-    document.getElementById("profileChangeBtn").addEventListener("click", function(){
-      var pid = profileOpenFor; closeProfile(); actions.pickProfileShot(pid);
+
+  if(shotViewer){
+    shotTrack.addEventListener("scroll", function(){
+      if(!shotTrack.clientWidth) return;
+      var i = Math.round(shotTrack.scrollLeft / shotTrack.clientWidth);
+      if(i!==viewerIndex){ viewerIndex = i; syncViewerUI(); }
     });
-    document.getElementById("profileDeleteBtn").addEventListener("click", function(){
-      var player = findPlayer(profileOpenFor);
-      closeProfile();
-      if(player){ deleteProfileShot(player); render(); save(); }
+    shotTabs.addEventListener("click", function(e){
+      var b = e.target.closest(".shot-tab");
+      if(b) goViewer(parseInt(b.getAttribute("data-index"),10), true);
+    });
+    shotPrev.addEventListener("click", function(){ goViewer(viewerIndex-1, true); });
+    shotNext.addEventListener("click", function(){ goViewer(viewerIndex+1, true); });
+    document.getElementById("shotCloseBtn").addEventListener("click", closeViewer);
+    /* tapping the empty area around a picture closes, like most photo viewers */
+    shotTrack.addEventListener("click", function(e){ if(e.target.classList.contains("shot-slide")) closeViewer(); });
+    document.getElementById("shotChangeBtn").addEventListener("click", function(){
+      var sl = viewerSlides[viewerIndex], pid = viewerFor;
+      if(!sl || !sl.kind) return;
+      closeViewer(); actions.pickShot(pid+":"+sl.kind);
+    });
+    document.getElementById("shotDeleteBtn").addEventListener("click", function(){
+      var sl = viewerSlides[viewerIndex], player = findPlayer(viewerFor);
+      closeViewer();
+      if(player && sl && sl.kind){ deleteShot(player, shotKind(sl.kind)); render(); save(); }
     });
     document.addEventListener("keydown", function(e){
-      if(e.key==="Escape" && profileOpenFor) closeProfile();
+      if(!viewerFor) return;
+      if(e.key==="Escape") closeViewer();
+      else if(e.key==="ArrowLeft") goViewer(viewerIndex-1, true);
+      else if(e.key==="ArrowRight") goViewer(viewerIndex+1, true);
     });
+    window.addEventListener("resize", function(){ if(viewerFor) goViewer(viewerIndex, false); });
   }
 
   /* ---------------- background music + bid chime ---------------- */
