@@ -157,9 +157,9 @@
 
   .player-count{ font-size:12px; color:var(--text-faint); margin:10px 0 6px; }
   .player-table{ display:flex; flex-direction:column; gap:4px; overflow-x:auto; }
-  .player-table .player-row, .player-table .player-row.head{ min-width:780px; }
+  .player-table .player-row, .player-table .player-row.head{ min-width:846px; }
   .player-row{
-    display:grid; grid-template-columns:36px minmax(120px,1fr) 84px 148px 148px 148px minmax(160px,1fr) 30px;
+    display:grid; grid-template-columns:36px 58px minmax(120px,1fr) 84px 148px 148px 148px minmax(160px,1fr) 30px;
     gap:8px; align-items:center;
   }
   .player-row.head{ font-size:11px; color:var(--text-faint); text-transform:uppercase; letter-spacing:.04em; padding:0 0 2px; }
@@ -300,23 +300,6 @@
   .showcase-desc::before{ content:"\201C"; color:var(--accent); margin-right:2px; font-style:normal; }
   .showcase-desc::after{ content:"\201D"; color:var(--accent); margin-left:1px; font-style:normal; }
   .showcase-desc.empty{ visibility:hidden; }
-  .showcase-info{
-    display:none; margin-top:8px; padding:9px 12px;
-    background:var(--surface); border:1px solid var(--border-soft);
-    border-left:3px solid var(--accent); border-radius:var(--radius-sm);
-  }
-  .si-head{ display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; }
-  .si-name{ font-family:var(--font-serif-kr); font-size:19px; font-weight:700; color:var(--accent-strong); line-height:1.25; }
-  .si-head .badge-pos{ font-size:12.5px; padding:2px 9px; }
-  .si-picks{ font-size:13.5px; color:var(--text-dim); margin-left:auto; }
-  .si-desc{
-    margin-top:5px; font-family:var(--font-serif-kr); font-weight:600; font-size:14.5px; line-height:1.45;
-    color:var(--text); overflow-wrap:anywhere;
-  }
-  .si-desc::before{ content:"\201C"; color:var(--accent); }
-  .si-desc::after{ content:"\201D"; color:var(--accent); }
-  /* the captain view is always phone-width, so it always gets the info line */
-  .captain-shell .showcase-info{ display:block; }
   .captain-shell .showcase-meta-zone .showcase-desc{ display:none; }
   /* control buttons sit three to a row on phones; drop the extra word when
      that row gets too narrow so labels never break mid-word */
@@ -459,6 +442,51 @@
   .photo-pick-btn:hover{ border-color:var(--accent); }
   .photo-pick-btn img{ width:100%; height:100%; object-fit:cover; display:block; }
   .photo-pick-placeholder{ color:var(--text-faint); font-size:16px; line-height:1; }
+  .profile-pick-btn{
+    height:32px; padding:0 4px; border-radius:6px; border:1px dashed var(--border);
+    background:var(--surface-2); color:var(--text-dim); font-size:11.5px; font-weight:600;
+    cursor:pointer; white-space:nowrap;
+  }
+  .profile-pick-btn:hover{ border-color:var(--accent); }
+  .profile-pick-btn.has{ border-style:solid; border-color:var(--accent); color:var(--accent-strong); background:var(--accent-dim); }
+
+  /* ---------- profile screenshot popup ---------- */
+  .showcase-kicker{ align-items:center; gap:8px; }
+  .showcase-profile-btn{
+    margin-right:auto; display:inline-flex; align-items:center; gap:4px; padding:4px 11px;
+    border-radius:999px; border:1px solid var(--accent); background:var(--surface-2);
+    color:var(--accent-strong); font-family:inherit; font-size:12.5px; font-weight:700;
+    letter-spacing:0; text-transform:none; cursor:pointer;
+  }
+  .showcase-profile-btn:hover{ background:var(--accent-dim); }
+  .profile-overlay{
+    position:fixed; inset:0; z-index:110; background:rgba(5,3,1,.9);
+    display:flex; align-items:center; justify-content:center; padding:12px;
+  }
+  .profile-overlay[hidden]{ display:none; }
+  .profile-dialog{ display:flex; flex-direction:column; gap:8px; max-width:100%; max-height:100%; min-width:min(320px,100%); }
+  .profile-head{ display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .profile-title{ font-family:var(--font-serif-kr); font-weight:700; font-size:16px; color:var(--accent-strong); }
+  .profile-close{
+    width:40px; height:40px; flex:0 0 auto; border-radius:999px; border:1px solid var(--border);
+    background:var(--surface-2); color:var(--text); font-size:22px; line-height:1; cursor:pointer;
+  }
+  .profile-body{ display:flex; justify-content:center; min-height:0; }
+  .profile-img{
+    display:block; width:auto; height:auto; object-fit:contain;
+    max-width:calc(100vw - 16px); max-height:calc(100vh - 66px); max-height:calc(100dvh - 66px);
+    border-radius:6px; border:1px solid var(--border);
+  }
+  .profile-loading{ color:var(--text-dim); padding:40px 20px; text-align:center; }
+  .profile-actions{ display:flex; justify-content:flex-end; gap:8px; }
+  .profile-actions[hidden]{ display:none; }
+  /* leave room for the change/delete row when it's shown (setup only) */
+  .profile-dialog:has(.profile-actions:not([hidden])) .profile-img{ max-height:calc(100dvh - 112px); }
+  @media (orientation:landscape) and (max-height:540px){
+    .profile-overlay{ padding:6px 8px; }
+    .profile-dialog{ gap:4px; }
+    .profile-close{ width:34px; height:34px; font-size:20px; }
+  }
 
   .crop-overlay{
     position:fixed; inset:0; background:rgba(5,3,1,.8); z-index:100;
@@ -504,7 +532,6 @@
     .showcase-kicker{ font-size:12px; }
     .showcase-portrait-name{ font-size:max(14px,3.8cqw); }
     .showcase-meta-zone .showcase-desc{ display:none; }
-    .showcase-info{ display:block; }
     .player-card{ padding:14px 16px; }
     .bid-now{ flex-wrap:nowrap; gap:12px; }
     .bid-amount{ font-size:30px; }
@@ -606,6 +633,8 @@
 
     .stage{
       display:grid; grid-template-columns:minmax(0,52%) minmax(0,1fr);
+      /* as big as the height allows (kicker + padding included), up to 62% */
+      grid-template-columns:minmax(0, min(62%, calc((100dvh - 44px - 44px) * 1677 / 938))) minmax(0,1fr);
       column-gap:16px; row-gap:10px; align-items:start; align-content:start;
       padding:10px 14px 12px;
     }
@@ -616,9 +645,6 @@
     .showcase-portrait-name{ font-size:max(16px,3.8cqw); }
     /* the in-card quote would be ~8px here — show it under the card instead */
     .showcase-meta-zone .showcase-desc{ display:none; }
-    .showcase-info{ display:block; padding:7px 10px; }
-    .si-name{ font-size:17px; }
-    .si-desc{ margin-top:3px; font-size:14px; line-height:1.35; }
     .player-card{ padding:10px 14px; }
     .bid-now{ flex-wrap:nowrap; gap:10px; }
     .bid-amount{ font-size:30px; line-height:1.1; }
@@ -644,11 +670,76 @@
     .bgm-credit{ display:none; }
     .site-credit{ top:auto; left:auto; right:58px; bottom:18px; font-size:11px; padding:4px 10px; }
   }
+
+  /* ---------- phone pager (팀 현황 ‹ 경매 › 순서) ---------- */
+  .m-nav{ display:none; }
+  .m-arrow{
+    appearance:none; flex:0 0 auto; width:34px; border-radius:var(--radius-sm);
+    border:1px solid var(--border); background:var(--surface-2); color:var(--accent-strong);
+    font-size:22px; line-height:1; padding:0 0 3px; cursor:pointer;
+  }
+  .m-arrow:disabled{ opacity:.3; cursor:default; }
+  .m-tab{
+    appearance:none; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    min-width:0; padding:3px 10px; border-radius:var(--radius-sm);
+    border:1px solid var(--border-soft); background:transparent; color:var(--text-dim);
+    font-size:13px; font-weight:700; line-height:1.15; white-space:nowrap; cursor:pointer;
+  }
+  .m-tab.active{ background:var(--accent-dim); border-color:var(--accent); color:var(--accent-strong); }
+  .m-live{ font-size:11px; font-weight:600; color:var(--accent-strong); }
+  @media (max-width:600px) and (orientation:portrait), (orientation:landscape) and (max-height:540px){
+    #app.phase-auction{ height:100vh; height:100dvh; min-height:0; overflow:hidden; }
+    #app.phase-auction .header{ flex:0 0 auto; }
+    #app.phase-auction .header-mid{ display:none; }
+    .m-nav{ display:flex; align-items:stretch; gap:4px; min-width:0; height:34px; }
+    .layout{
+      display:flex; flex:1 1 auto; min-height:0; height:auto;
+      overflow-x:auto; overflow-y:hidden; scroll-snap-type:x mandatory;
+      overscroll-behavior-x:contain; scrollbar-width:none; padding-bottom:0;
+    }
+    .layout::-webkit-scrollbar{ display:none; }
+    .layout > .panel{
+      order:0 !important; flex:0 0 100%; width:100%; min-width:0; height:100%;
+      scroll-snap-align:start; scroll-snap-stop:always;
+      overflow-x:hidden; overflow-y:auto !important; border:none !important;
+      padding:12px 14px 72px;
+    }
+    .layout > .panel:nth-child(2) .stage{ padding-bottom:72px; }
+    /* team and queue pages use the full width as a grid */
+    .layout > .panel:nth-child(1), .layout > .panel:nth-child(3){
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:8px 10px; align-content:start;
+    }
+    .layout > .panel:nth-child(1) > .panel-title,
+    .layout > .panel:nth-child(3) > .panel-title,
+    .layout > .panel:nth-child(3) > .empty-note{ grid-column:1 / -1; margin-bottom:0; }
+    .layout > .panel .team-card, .layout > .panel .queue-item, .layout > .panel .passed-item{ margin-bottom:0; }
+  }
+  @media (max-width:600px) and (orientation:portrait){
+    .m-nav{ order:1; flex:1 1 100%; }
+    .m-tab{ flex:1 1 0; }
+  }
+  @media (orientation:landscape) and (max-height:540px) and (max-width:660px){
+    #app.phase-auction .brand{ display:none; }
+  }
 </style>
 
 <div id="app"></div>
 <div id="globalToast" class="global-toast"></div>
 <input type="file" id="photoFileInput" accept="image/*" hidden>
+<input type="file" id="profileFileInput" accept="image/*" hidden>
+<div id="profileOverlay" class="profile-overlay" hidden>
+  <div class="profile-dialog" role="dialog" aria-modal="true" aria-labelledby="profileTitle">
+    <div class="profile-head">
+      <span class="profile-title" id="profileTitle"></span>
+      <button type="button" class="profile-close" id="profileCloseBtn" aria-label="닫기">&times;</button>
+    </div>
+    <div class="profile-body" id="profileBody"></div>
+    <div class="profile-actions" id="profileActions" hidden>
+      <button type="button" class="btn btn-sm" id="profileChangeBtn">사진 변경</button>
+      <button type="button" class="btn btn-sm btn-danger" id="profileDeleteBtn">삭제</button>
+    </div>
+  </div>
+</div>
 <div id="cropOverlay" class="crop-overlay" hidden>
   <div class="crop-dialog">
     <div class="crop-title">사진 위치 조정</div>
@@ -791,6 +882,16 @@
     if(s.current) s.current.history = s.current.history||[];
     return s;
   }
+  var lastRenderSig = "";
+  function renderSig(s){
+    try{
+      return JSON.stringify(s, function(k, v){
+        if(k==="timerValue") return undefined;
+        if(typeof v==="string" && v.length>200 && v.indexOf("data:")===0) return v.length+":"+v.slice(-40);
+        return v;
+      });
+    }catch(e){ return String(Math.random()); }
+  }
   function attachSync(){
     if(!fbEnabled || !roomId || fbListenerAttached) return;
     fbListenerAttached = true;
@@ -799,6 +900,10 @@
       fbSyncedOnce = true;
       if(remote){
         state = normalizeRemoteState(remote);
+        /* the admin's timer rewrites the whole room every second; when only
+           the countdown moved, patch the numbers instead of rebuilding the
+           page — a rebuild every second cuts off any swipe or scroll */
+        if(renderSig(state)===lastRenderSig){ updateTimerUI(); return; }
         render();
       }
     });
@@ -916,35 +1021,41 @@
     '</div>';
   }
 
-  /* portrait frame: shows member/<선수이름>.png when a file matches, with the player's name captioned bottom-right */
+  /* portrait frame, first image that loads wins: uploaded photo →
+     member/<선수이름>.png → most-pick champion portrait art (1st, then 2nd,
+     3rd — Norra has no PC League art, so it falls through) → empty frame */
+  function championLoadingArtUrl(id){
+    return "https://ddragon.leagueoflegends.com/cdn/img/champion/loading/"+id+"_0.jpg";
+  }
+  window.naejeonPortraitFallback = function(img){
+    var rest = (img.getAttribute("data-fallback")||"").split("|").filter(Boolean);
+    if(!rest.length){ img.remove(); return; }
+    img.setAttribute("data-fallback", rest.slice(1).join("|"));
+    img.src = rest[0];
+  };
   function showcasePortraitHtml(player){
     var n = player && player.name ? String(player.name).trim() : "";
     if(!n) return '<div class="showcase-portrait-box"></div>';
-    var src = player.photoDataUrl ? player.photoDataUrl : ("member/"+encodeURIComponent(n)+".png");
+    var chain = [];
+    if(player.photoDataUrl) chain.push(player.photoDataUrl);
+    chain.push("member/"+encodeURIComponent(n)+".png");
+    (player.picks||[]).forEach(function(t){
+      t = String(t==null?"":t).trim();
+      var c = t ? matchChampion(t) : null;
+      if(c && !CHAMP_IMG_OVERRIDES[c.id]) chain.push(championLoadingArtUrl(c.id));
+    });
     return '<div class="showcase-portrait-box">'+
-      '<img class="showcase-portrait-img" src="'+src+'" alt="" loading="lazy" onerror="this.remove();">'+
+      '<img class="showcase-portrait-img" src="'+chain[0]+'" data-fallback="'+escapeHtml(chain.slice(1).join("|"))+'" alt="" loading="lazy" onerror="naejeonPortraitFallback(this)">'+
       '<span class="showcase-portrait-name">'+escapeHtml(n)+'</span>'+
     '</div>';
   }
 
-  /* on a phone the template card scales its text down to 7-10px, so the
-     same facts are repeated under it at real sizes (hidden on big screens) */
-  function showcaseInfoHtml(player, picks, desc){
-    if(!player) return "";
-    var champNames = (picks||[]).map(function(t){
-      t = String(t==null?"":t).trim();
-      if(!t) return "";
-      var c = matchChampion(t);
-      return c ? c.name : t;
-    }).filter(Boolean);
-    return '<div class="showcase-info">'+
-      '<div class="si-head">'+
-        '<span class="si-name">'+escapeHtml(player.name||"")+'</span>'+
-        (player.position?'<span class="badge-pos">'+escapeHtml(player.position)+'</span>':'')+
-        (champNames.length?'<span class="si-picks">'+champNames.map(escapeHtml).join(" · ")+'</span>':'')+
-      '</div>'+
-      (desc?'<div class="si-desc">'+escapeHtml(desc)+'</div>':'')+
-    '</div>';
+  /* opens the player's game-profile screenshot (shown only when one was uploaded) */
+  function showcaseProfileBtnHtml(player){
+    if(!player || !player.profileAt) return "";
+    return '<button type="button" class="showcase-profile-btn" data-action="openProfile" data-id="'+player.id+'">'+
+      '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M21 17l-5-5-6 6"/></svg>'+
+      '프로필</button>';
   }
 
   /* fills one of the three MOST PICK squares in the showcase template */
@@ -1398,9 +1509,60 @@
     if(valEl) valEl.textContent = cur.timerValue;
     if(fillEl) fillEl.style.width = Math.max(0, (cur.timerValue/state.config.timerSeconds)*100) + "%";
     if(boxEl) boxEl.classList.toggle("urgent", cur.timerValue<=5);
+    var navTimer = document.getElementById("mNavTimer");
+    if(navTimer) navTimer.textContent = cur.timerValue;
+  }
+
+  /* ---- phone pager: 팀 현황 ‹ 경매 › 순서 as swipeable full-width pages ---- */
+  var PAGER_MQ = "(max-width:600px) and (orientation:portrait), (orientation:landscape) and (max-height:540px)";
+  var mobilePage = 1;
+  var pagerTarget = null, pagerTargetTimer = null;
+  var pagerPlayerId;
+  function isPager(){ return !!(window.matchMedia && window.matchMedia(PAGER_MQ).matches); }
+  function mobileNavHtml(){
+    var cur = state.current;
+    var live = cur ? '<span class="m-live num">'+cur.bid+'P · <span id="mNavTimer">'+cur.timerValue+'</span></span>' : '';
+    var labels = ["팀 현황","경매","순서"];
+    var tabs = labels.map(function(label, i){
+      return '<button class="m-tab'+(i===mobilePage?' active':'')+'" data-action="mobilePage" data-id="'+i+'">'+
+        '<span class="m-tab-label">'+label+'</span>'+(i===1?live:'')+'</button>';
+    }).join("");
+    return '<nav class="m-nav" aria-label="화면 전환">'+
+      '<button class="m-arrow" data-action="mobileStep" data-id="-1" aria-label="이전 화면"'+(mobilePage<=0?' disabled':'')+'>&#8249;</button>'+
+      tabs+
+      '<button class="m-arrow" data-action="mobileStep" data-id="1" aria-label="다음 화면"'+(mobilePage>=2?' disabled':'')+'>&#8250;</button>'+
+    '</nav>';
+  }
+  function syncPagerUI(){
+    Array.prototype.forEach.call(app.querySelectorAll(".m-tab"), function(b){
+      b.classList.toggle("active", parseInt(b.getAttribute("data-id"),10)===mobilePage);
+    });
+    var arrows = app.querySelectorAll(".m-arrow");
+    if(arrows[0]) arrows[0].disabled = mobilePage<=0;
+    if(arrows[1]) arrows[1].disabled = mobilePage>=2;
+  }
+  function alignPager(smooth){
+    var L = app.querySelector(".layout");
+    if(!L || !isPager() || !L.clientWidth) return;
+    var left = mobilePage * L.clientWidth;
+    if(Math.abs(L.scrollLeft-left) < 2) return;
+    if(smooth && L.scrollTo){
+      pagerTarget = mobilePage;
+      clearTimeout(pagerTargetTimer);
+      pagerTargetTimer = setTimeout(function(){ pagerTarget = null; }, 800);
+      L.scrollTo({ left:left, behavior:"smooth" });
+    }else{
+      L.scrollLeft = left;
+    }
+  }
+  function setMobilePage(p, smooth){
+    mobilePage = Math.max(0, Math.min(2, p));
+    syncPagerUI();
+    alignPager(smooth);
   }
 
   function render(){
+    lastRenderSig = renderSig(state);
     /* re-renders can be triggered by a remote Firebase update (e.g. the
        admin's timer ticking every second) while the user is mid-typing in
        an input here, which would otherwise wipe it out on every rebuild */
@@ -1426,6 +1588,13 @@
       app.classList.add("captain-app");
       app.innerHTML = captainAppHtml();
     }else{
+      if(state.phase==="auction"){
+        var curPid = state.current ? state.current.playerId : null;
+        if(curPid!==pagerPlayerId){
+          if(pagerPlayerId!==undefined) mobilePage = 1;
+          pagerPlayerId = curPid;
+        }
+      }
       var html = headerHtml();
       if(state.phase==="setup") html += setupHtml();
       else if(state.phase==="waiting") html += waitingHtml();
@@ -1438,6 +1607,16 @@
         });
       }
       app.dataset.phase = state.phase;
+      app.classList.toggle("phase-auction", state.phase==="auction");
+      alignPager(false);
+    }
+
+    if(profileOpenFor){
+      var openP = findPlayer(profileOpenFor);
+      if(!openP || !openP.profileAt ||
+         (state.phase==="auction" && (!state.current || state.current.playerId!==profileOpenFor))){
+        closeProfile();
+      }
     }
 
     if(state.phase==="auction") syncAuctionSounds(state.current);
@@ -1471,7 +1650,7 @@
     }
     return '<div class="header">'+
       '<div class="brand"><span class="brand-mark">내전 경매</span><span class="brand-sub">진행자 콘솔</span></div>'+
-      mid+
+      mid+(state.phase==="auction"?mobileNavHtml():"")+
       '<div class="header-right">'+fullscreenBtnHtml()+right+'</div>'+
     '</div>';
   }
@@ -1494,6 +1673,9 @@
       var photoThumb = p.photoDataUrl ? '<img src="'+p.photoDataUrl+'" alt="">' : '<span class="photo-pick-placeholder">&#43;</span>';
       return '<div class="player-row" data-id="'+p.id+'">'+
         '<button type="button" class="photo-pick-btn" title="사진 업로드/변경" data-action="pickPlayerPhoto" data-id="'+p.id+'">'+photoThumb+'</button>'+
+        (p.profileAt
+          ? '<button type="button" class="profile-pick-btn has" title="프로필 사진 보기/변경" data-action="openProfile" data-id="'+p.id+'">보기</button>'
+          : '<button type="button" class="profile-pick-btn" title="프로필 스크린샷 업로드" data-action="pickProfileShot" data-id="'+p.id+'">+ 추가</button>')+
         '<input type="text" value="'+escapeHtml(p.name)+'" placeholder="이름" data-scope="player" data-id="'+p.id+'" data-field="name">'+
         '<input type="text" value="'+escapeHtml(p.position||"")+'" placeholder="포지션" data-scope="player" data-id="'+p.id+'" data-field="position">'+
         pickSearchHtml(p.id, 0, picks[0])+
@@ -1540,7 +1722,7 @@
         '<div style="margin-top:8px;"><button class="btn btn-sm" data-action="addPlayers">선수 추가</button></div>'+
         '<div class="player-count">등록된 선수 '+state.players.length+'명 · 모스트픽 칸에 챔피언 이름을 검색해 등록하세요</div>'+
         '<div class="player-table">'+
-          '<div class="player-row head"><span>사진</span><span>이름</span><span>포지션</span><span>모스트픽 1</span><span>모스트픽 2</span><span>모스트픽 3</span><span>한줄 소감</span><span></span></div>'+
+          '<div class="player-row head"><span>사진</span><span>프로필</span><span>이름</span><span>포지션</span><span>모스트픽 1</span><span>모스트픽 2</span><span>모스트픽 3</span><span>한줄 소감</span><span></span></div>'+
           (playerRows || '<div class="empty-note">아직 등록된 선수가 없습니다</div>')+
         '</div>'+
       '</div>'+
@@ -1678,7 +1860,7 @@
 
     var showcaseHtml =
       '<div class="showcase-wrap">'+
-        '<div class="showcase-kicker"><span class="num">'+(soldOrPassed+1)+' / '+totalCount+'</span></div>'+
+        '<div class="showcase-kicker">'+showcaseProfileBtnHtml(player)+'<span class="num">'+(soldOrPassed+1)+' / '+totalCount+'</span></div>'+
         '<div class="showcase-card">'+
           showcasePortraitHtml(player)+
           showcasePickHtml(picks[0],"p1")+showcasePickHtml(picks[1],"p2")+showcasePickHtml(picks[2],"p3")+
@@ -1687,7 +1869,6 @@
             '<span class="showcase-desc'+(desc?"":" empty")+'">'+escapeHtml(desc)+'</span>'+
           '</div>'+
         '</div>'+
-        showcaseInfoHtml(player, picks, desc)+
       '</div>';
 
     var log = cur.history.slice(0,8).map(function(h){
@@ -1816,6 +1997,7 @@
     var desc = player && player.desc ? player.desc.trim() : "";
     var showcaseHtml =
       '<div class="showcase-wrap">'+
+        (player && player.profileAt ? '<div class="showcase-kicker">'+showcaseProfileBtnHtml(player)+'</div>' : '')+
         '<div class="showcase-card">'+
           showcasePortraitHtml(player)+
           showcasePickHtml(picks[0],"p1")+showcasePickHtml(picks[1],"p2")+showcasePickHtml(picks[2],"p3")+
@@ -1824,7 +2006,6 @@
             '<span class="showcase-desc'+(desc?"":" empty")+'">'+escapeHtml(desc)+'</span>'+
           '</div>'+
         '</div>'+
-        showcaseInfoHtml(player, picks, desc)+
       '</div>';
 
     var bidNow =
@@ -1834,9 +2015,9 @@
           '<span class="bid-amount num">'+cur.bid+'P</span>'+
           '<span class="bid-team">'+(cur.bidTeamId? escapeHtml(findTeam(cur.bidTeamId).name)+" 최고가" : "입찰 대기중")+'</span>'+
         '</div>'+
-        '<div class="timer-box'+(cur.timerValue<=5?' urgent':'')+'">'+
-          '<div class="timer-bar"><div class="timer-fill" style="width:'+(cur.timerValue/state.config.timerSeconds*100)+'%;"></div></div>'+
-          '<span class="timer-num num">'+cur.timerValue+'</span>'+
+        '<div class="timer-box'+(cur.timerValue<=5?' urgent':'')+'" id="timerBox">'+
+          '<div class="timer-bar"><div class="timer-fill" id="timerFill" style="width:'+(cur.timerValue/state.config.timerSeconds*100)+'%;"></div></div>'+
+          '<span class="timer-num num" id="timerValue">'+cur.timerValue+'</span>'+
         '</div>'+
       '</div>';
 
@@ -1869,6 +2050,17 @@
   /* ---------------- events ---------------- */
 
   actions.toggleFullscreen = toggleFullscreen;
+  actions.mobilePage = function(id){ setMobilePage(parseInt(id,10), true); };
+  actions.mobileStep = function(id){ setMobilePage(mobilePage + parseInt(id,10), true); };
+  /* scroll doesn't bubble, so listen in the capture phase for the pager */
+  app.addEventListener("scroll", function(e){
+    var L = e.target;
+    if(!L || !L.classList || !L.classList.contains("layout") || !L.clientWidth || !isPager()) return;
+    var p = Math.round(L.scrollLeft / L.clientWidth);
+    if(pagerTarget!==null){ if(p===pagerTarget) pagerTarget = null; return; }
+    if(p!==mobilePage){ mobilePage = p; syncPagerUI(); }
+  }, true);
+  window.addEventListener("resize", function(){ alignPager(false); });
   document.addEventListener("fullscreenchange", function(){ render(); });
   document.addEventListener("webkitfullscreenchange", function(){ render(); });
 
@@ -2115,6 +2307,132 @@
       var player = findPlayer(cropCtx.playerId);
       if(player){ player.photoDataUrl = dataUrl; render(); save(); }
       closeCropModal();
+    });
+  }
+
+  /* ---------------- profile screenshot (separate from the card portrait) ----------------
+     game-profile screenshots are big and the room state is rewritten every
+     timer tick, so they live at their own path, written once on upload and
+     fetched only when someone opens the popup. Kept out of localStorage too —
+     a few of them would fill it and silently stop the auction state saving. */
+  var PROFILE_MAX_SIDE = 1600;
+  var PROFILE_MAX_BYTES = 20*1024*1024;
+  var profileCache = {};
+  var profileOpenFor = null;
+  var pendingProfilePlayerId = null;
+  var profileOverlay = document.getElementById("profileOverlay");
+  var profileBody = document.getElementById("profileBody");
+  var profileTitle = document.getElementById("profileTitle");
+  var profileActions = document.getElementById("profileActions");
+  var profileFileInput = document.getElementById("profileFileInput");
+
+  function profileRef(key, playerId){ return fbDb.ref(ROOM_PATH_PREFIX + "prof_" + key + "/" + playerId); }
+  function profileCacheKey(key, player){ return key + "/" + player.id + "/" + (player.profileAt||0); }
+  function loadProfileShot(player, cb){
+    var key = state.profileKey || ADMIN_ID;
+    var ck = profileCacheKey(key, player);
+    if(profileCache[ck]) return cb(profileCache[ck]);
+    if(!fbEnabled || !key) return cb(null);
+    profileRef(key, player.id).once("value").then(function(snap){
+      var v = snap.val();
+      if(typeof v==="string" && v.indexOf("data:image/")===0){ profileCache[ck] = v; cb(v); }
+      else cb(null);
+    }).catch(function(){ cb(null); });
+  }
+  function saveProfileShot(player, dataUrl){
+    var key = ADMIN_ID;
+    state.profileKey = key;
+    player.profileAt = Date.now();
+    profileCache[profileCacheKey(key, player)] = dataUrl;
+    if(fbEnabled){
+      profileRef(key, player.id).set(dataUrl).catch(function(){ globalToast("프로필 사진 업로드에 실패했습니다"); });
+    }
+  }
+  function deleteProfileShot(player){
+    var key = state.profileKey || ADMIN_ID;
+    if(fbEnabled) profileRef(key, player.id).remove().catch(function(){});
+    delete player.profileAt;
+  }
+  function downscaleImage(file, cb){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        var scale = Math.min(1, PROFILE_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+        var w = Math.round(img.naturalWidth*scale), h = Math.round(img.naturalHeight*scale);
+        var c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        cb(c.toDataURL("image/jpeg", 0.82));
+      };
+      img.onerror = function(){ globalToast("이미지를 읽을 수 없습니다"); };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  actions.pickProfileShot = function(playerId){
+    pendingProfilePlayerId = playerId;
+    if(profileFileInput) profileFileInput.click();
+  };
+  if(profileFileInput){
+    profileFileInput.addEventListener("change", function(){
+      var file = profileFileInput.files && profileFileInput.files[0];
+      profileFileInput.value = "";
+      if(!file || !pendingProfilePlayerId) return;
+      if(!/^image\//.test(file.type)){ globalToast("이미지 파일만 업로드할 수 있습니다"); return; }
+      if(file.size > PROFILE_MAX_BYTES){ globalToast("사진 용량은 20MB 이하로 올려주세요"); return; }
+      var pid = pendingProfilePlayerId;
+      downscaleImage(file, function(dataUrl){
+        var player = findPlayer(pid);
+        if(!player) return;
+        saveProfileShot(player, dataUrl);
+        render(); save();
+        globalToast((player.name||"선수")+" 프로필 사진이 등록되었습니다");
+      });
+    });
+  }
+
+  function closeProfile(){
+    profileOpenFor = null;
+    if(profileOverlay) profileOverlay.hidden = true;
+    if(profileBody) profileBody.innerHTML = "";
+  }
+  actions.openProfile = function(playerId){
+    var player = findPlayer(playerId);
+    if(!player || !player.profileAt || !profileOverlay) return;
+    profileOpenFor = playerId;
+    profileTitle.textContent = (player.name||"") + " 프로필";
+    profileBody.innerHTML = '<div class="profile-loading">불러오는 중...</div>';
+    profileActions.hidden = !(!IS_CAPTAIN_VIEW && state.phase==="setup");
+    profileOverlay.hidden = false;
+    loadProfileShot(player, function(url){
+      if(profileOpenFor!==playerId) return;
+      profileBody.innerHTML = "";
+      if(url){
+        var img = document.createElement("img");
+        img.className = "profile-img";
+        img.alt = (player.name||"") + " 프로필";
+        img.src = url;
+        profileBody.appendChild(img);
+      }else{
+        profileBody.innerHTML = '<div class="profile-loading">사진을 불러오지 못했습니다</div>';
+      }
+    });
+  };
+  if(profileOverlay){
+    profileOverlay.addEventListener("click", function(e){ if(e.target===profileOverlay) closeProfile(); });
+    document.getElementById("profileCloseBtn").addEventListener("click", closeProfile);
+    document.getElementById("profileChangeBtn").addEventListener("click", function(){
+      var pid = profileOpenFor; closeProfile(); actions.pickProfileShot(pid);
+    });
+    document.getElementById("profileDeleteBtn").addEventListener("click", function(){
+      var player = findPlayer(profileOpenFor);
+      closeProfile();
+      if(player){ deleteProfileShot(player); render(); save(); }
+    });
+    document.addEventListener("keydown", function(e){
+      if(e.key==="Escape" && profileOpenFor) closeProfile();
     });
   }
 
